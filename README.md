@@ -110,7 +110,7 @@ Para cada una escribí qué problema de negocio responde y cómo interpreto el r
 
 **Lo más importante que encontré:** la Query 9 original une viajes y mantenimientos al mismo tiempo, entonces cada viaje
 se repite una vez por cada mantenimiento del vehículo (es un *fan-out*). Por eso infla los kilómetros unas 33 veces y los costos más de 600 veces.
-Escribí una versión corregida (9b), que da totales que cierran con la base y además es unas 150 veces más rápida.
+Escribí una versión corregida (9b): el costo total cierra exacto con la base y los kilómetros también, salvo los de 22 vehículos que nunca tuvieron mantenimiento (no tienen costo para dividir). Además es unas 150 veces más rápida.
 
 **Índices (`03_optimization_indexes.sql`):** creé 5:
 - `deliveries(trip_id)`
@@ -154,12 +154,14 @@ Si corro dos veces el mismo día no se duplican datos.
 | Cambiar el teléfono de un conductor | se crea una versión nueva en `dim_driver` y la anterior queda cerrada |
 | Carga inicial completa | 66 segundos |
 
+Las capturas de las tablas en Snowflake están en el notebook del Avance 3, en `3. Documentación/img/` y al final de este documento.
+
 ## 6. Avance 4: arquitectura en AWS
 
 El diagrama (`2. Scripts/aws_architecture_diagram.png`) tiene tres partes:
 - **Tiempo real:** API Gateway, las 3 Lambda y DynamoDB, más SNS para las alertas.
 - **Transaccional:** RDS PostgreSQL en una subred privada.
-- **Analítica:** una EC2 que corre el ETL de noche hacia Snowflake. S3 guarda archivos y backups.
+- **Analítica:** una EC2 que corre el ETL de noche hacia Snowflake. S3 guarda todo el histórico organizado por fecha (`raw-data/AAAA/MM/DD/`) y los backups.
 
 A todo eso se suman CloudWatch, IAM, KMS, Secrets Manager y Budgets.
 
