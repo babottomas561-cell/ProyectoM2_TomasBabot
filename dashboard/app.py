@@ -6,12 +6,16 @@ Usa datos reales del Data Warehouse en Snowflake (FLEETLOGIX_DW.ANALYTICS), expo
 
 Para abrirlo (desde la carpeta del proyecto):  streamlit run dashboard/app.py
 """
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+from consultas import leer
 
 st.set_page_config(page_title='FleetLogix · Tablero', page_icon='🚚', layout='wide')
 
@@ -41,15 +45,45 @@ st.markdown("""
   .nota { color: #6B7280; font-size: 0.82rem; }
   [data-testid="stMetricValue"] { font-size: 1.55rem; font-weight: 600; }
   [data-testid="stSidebar"] .pie { color: #94A3B8; font-size: 0.78rem; }
+  [data-testid="stSidebar"] .punto { color: #94A3B8; }
+  [data-testid="stSidebar"] .punto.vivo { color: #22C55E; }
   .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ================================================================ Datos
-@st.cache_data
+def leer_snowflake():
+    """Lee el Data Warehouse en vivo. Devuelve None si no hay credenciales (por ejemplo al correrlo en otra compu).
+    Las credenciales están en los Secrets de Streamlit (.streamlit/secrets.toml en local, que no se sube al repo).
+    Uso un usuario de solo lectura de Snowflake con su propio par de llaves, no mi usuario."""
+    try:
+        cred = dict(st.secrets['snowflake'])
+    except (KeyError, FileNotFoundError):
+        return None
+    import snowflake.connector
+    from cryptography.hazmat.primitives import serialization
+    llave = serialization.load_pem_private_key(cred.pop('private_key').encode(), password=None)
+    cred['private_key'] = llave.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8,
+                                              serialization.NoEncryption())
+    with snowflake.connector.connect(**cred, login_timeout=20, network_timeout=60) as conexion:
+        return leer(conexion, 'entregas_diarias'), leer(conexion, 'conductores')
+
+
+@st.cache_data(ttl='1h', show_spinner='Leyendo el Data Warehouse en Snowflake...')
 def cargar_datos():
-    entregas = pd.read_parquet(DATOS / 'entregas_diarias.parquet')
+    """Datos del tablero: de Snowflake en vivo si se puede, si no de la copia en parquet.
+    Guardo el resultado una hora para no prender el warehouse de Snowflake (y gastar créditos) en cada visita."""
+    fuente = {'vivo': False, 'hora': datetime.now(ZoneInfo('America/Bogota')), 'error': None}
+    try:
+        leido = leer_snowflake()
+    except Exception as e:  # sin conexión, prueba vencida, llave revocada...: sigo con la copia
+        leido, fuente['error'] = None, type(e).__name__
+    if leido is not None:
+        (entregas, conductores), fuente['vivo'] = leido, True
+    else:
+        entregas = pd.read_parquet(DATOS / 'entregas_diarias.parquet')
+        conductores = pd.read_parquet(DATOS / 'conductores.parquet')
     # Saco los días incompletos de los bordes: el primero y los últimos tienen viajes que todavía no terminaron
     # (por ejemplo 23 entregas el último día contra ~550 de un día normal) y bajarían los totales y las comparaciones.
     por_dia = entregas.groupby('fecha')['entregas'].sum()
@@ -60,8 +94,7 @@ def cargar_datos():
     entregas['mes'] = entregas['fecha'].dt.to_period('M').dt.to_timestamp()
     entregas['dia'] = pd.Categorical(entregas['fecha'].dt.dayofweek.map(dict(enumerate(DIAS))), DIAS, ordered=True)
     entregas['turno'] = entregas['turno'].map(TURNOS)
-    conductores = pd.read_parquet(DATOS / 'conductores.parquet')
-    return entregas, conductores, dias_excluidos
+    return entregas, conductores, dias_excluidos, fuente
 
 
 def resumen(df, por=None):
@@ -147,7 +180,7 @@ def barras_horizontales(datos, x, y, formato, color=AZUL, colores=None):
 
 
 # ================================================================ Filtros (en la barra lateral, valen para todas las páginas)
-entregas, conductores, dias_excluidos = cargar_datos()
+entregas, conductores, dias_excluidos, fuente = cargar_datos()
 fecha_min, fecha_max = entregas['fecha'].min(), entregas['fecha'].max()
 
 st.logo(str(CARPETA / 'logo.svg'), size='large')
@@ -169,9 +202,18 @@ with st.sidebar:
     turnos = st.multiselect('Turno', list(TURNOS.values()), placeholder='Todos')
     st.divider()
     excluidos = ', '.join(f'{d:%d/%m/%Y}' for d in dias_excluidos.index)
-    st.markdown(f'<div class="pie">● Data Warehouse en Snowflake<br>Datos del {fecha_min:%d/%m/%Y} al {fecha_max:%d/%m/%Y}<br>'
+    if fuente['vivo']:
+        origen = (f'<span class="punto vivo">●</span> En vivo desde Snowflake<br>'
+                  f'Leído a las {fuente["hora"]:%H:%M} (hora de Colombia), se renueva cada hora')
+    else:
+        motivo = ' (Snowflake no respondió)' if fuente['error'] else ''
+        origen = f'<span class="punto">●</span> Copia del Data Warehouse en parquet{motivo}'
+    st.markdown(f'<div class="pie">{origen}<br>Datos del {fecha_min:%d/%m/%Y} al {fecha_max:%d/%m/%Y}<br>'
                 f'Sin los días incompletos: {excluidos}<br>'
                 f'{numero(len(entregas))} filas resumidas de fact_deliveries</div>', unsafe_allow_html=True)
+    if fuente['vivo'] and st.button('Volver a leer Snowflake', icon=':material/refresh:', type='tertiary'):
+        cargar_datos.clear()
+        st.rerun()
 
 
 def aplicar_filtros(df, con_periodo=True):
@@ -522,20 +564,24 @@ def pagina_modelo():
 1. **PostgreSQL** (Avance 1): la base operativa con 505.650 registros en 6 tablas.
 2. **ETL** (`05_etl_pipeline.py`): extrae, calcula las métricas y carga en Snowflake todas las noches a las 02:00.
 3. **Snowflake** (`FLEETLOGIX_DW.ANALYTICS`): `fact_deliveries` (una fila por entrega completada) y 6 dimensiones.
-4. **Exportación** (`07_export_dashboard_data.py`): resume la tabla de hechos por día, ciudad, tipo de vehículo y turno,
-   y la guarda en `dashboard/data/`. Así el tablero se puede abrir sin credenciales de Snowflake.
-5. **Este tablero** (Streamlit): filtra y grafica esos datos.
+4. **Este tablero** (Streamlit) corre dos consultas sobre el modelo estrella (están en `dashboard/consultas.py`):
+   resume la tabla de hechos por día, ciudad, tipo de vehículo y turno, y saca los totales de cada conductor.
+   Se conecta con un usuario de **solo lectura** que tiene su propio par de llaves, y guarda el resultado una hora
+   para no prender el warehouse en cada visita.
+5. **Copia de respaldo** (`07_export_dashboard_data.py`): las mismas consultas guardadas en `dashboard/data/` en parquet.
+   Si Snowflake no responde (o cuando venza la cuenta de prueba), el tablero sigue andando con esa copia.
+   La barra lateral muestra de cuál de las dos fuentes está leyendo.
 """)
     caja = tarjeta('Modelo estrella en Snowflake')
     imagen = CARPETA.parent / '3. Documentación' / 'img' / 'modelo_estrella.png'
     if imagen.exists():
         caja.image(str(imagen), width='stretch')
-    caja = tarjeta('Tablas que usa el tablero')
+    caja = tarjeta('Tablas que usa el tablero', 'leídas ' + ('en vivo desde Snowflake' if fuente['vivo'] else 'de la copia en parquet'))
     caja.markdown(f"""
-| Archivo | Filas | Qué tiene |
+| Consulta | Filas | Qué tiene |
 |---|---|---|
-| `entregas_diarias.parquet` | {numero(len(entregas))} | entregas, a tiempo, kilos, km, litros, ingreso, costo y minutos por día, ciudad, vehículo y turno |
-| `conductores.parquet` | {numero(len(conductores))} | totales de cada conductor (sumando todas sus versiones del historial SCD tipo 2) |
+| `entregas_diarias` | {numero(len(entregas))} | entregas, a tiempo, kilos, km, litros, ingreso, costo y minutos por día, ciudad, vehículo y turno |
+| `conductores` | {numero(len(conductores))} | totales de cada conductor (sumando todas sus versiones del historial SCD tipo 2) |
 """)
 
 

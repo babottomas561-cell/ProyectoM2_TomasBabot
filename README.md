@@ -45,7 +45,9 @@ ProyectoM2_TomasBabot/
 │   └── aws_simulacion/                archivos que genera la simulación de AWS
 ├── dashboard/                         tablero en Streamlit (extra)
 │   ├── app.py
-│   ├── data/                          datos exportados del Data Warehouse (parquet)
+│   ├── consultas.py                   las consultas al Data Warehouse
+│   ├── usuario_lectura_snowflake.sql  usuario de solo lectura que usa el tablero
+│   ├── data/                          copia de respaldo del Data Warehouse (parquet)
 │   └── requirements.txt
 ├── .streamlit/config.toml             colores y fuente del tablero
 ├── requirements.txt
@@ -196,13 +198,22 @@ Para eso dejé las Lambda fuera de la VPC y el ETL corre en una EC2 chica.
 ![Tablero FleetLogix](3.%20Documentación/img/dashboard_resumen.png)
 
 Para mostrar los resultados armé un tablero con Streamlit y Plotly, publicado en Streamlit Community Cloud:
-**https://fleetlogix-tomasbabot.streamlit.app**. No lee la base operativa: usa el Data Warehouse de Snowflake.
-El script `07_export_dashboard_data.py` resume `fact_deliveries` por día, ciudad, tipo de vehículo y turno (41.985 filas),
-calcula los totales de cada conductor y guarda todo en `dashboard/data/`. Así el tablero se abre sin credenciales de Snowflake.
+**https://fleetlogix-tomasbabot.streamlit.app**. No lee la base operativa: **lee el Data Warehouse de Snowflake en vivo**.
+Corre dos consultas sobre el modelo estrella (`dashboard/consultas.py`): resume `fact_deliveries` por día, ciudad,
+tipo de vehículo y turno (41.985 filas) y calcula los totales de cada conductor.
+
+- **Seguridad:** el tablero no usa mi usuario. Creé uno de solo lectura (`usuario_lectura_snowflake.sql`) que solo puede
+  hacer SELECT en `FLEETLOGIX_DW.ANALYTICS` y entra con su propio par de llaves, sin contraseña. La llave privada está en
+  los Secrets de Streamlit Cloud y en `.streamlit/secrets.toml` en mi compu, que no se sube al repo.
+- **Costo:** guarda el resultado una hora, así no prende el warehouse en cada visita. El warehouse es X-Small y se apaga
+  solo al minuto sin consultas.
+- **Respaldo:** `07_export_dashboard_data.py` guarda las mismas consultas en `dashboard/data/` en parquet. Si Snowflake no
+  responde, o cuando venza la cuenta de prueba, el tablero sigue andando con esa copia. La barra lateral muestra de cuál
+  de las dos fuentes está leyendo, y en vivo tiene un botón para volver a leer Snowflake.
 
 ```bash
-python "2. Scripts/07_export_dashboard_data.py"   # solo si quiero actualizar los datos
-streamlit run dashboard/app.py
+streamlit run dashboard/app.py                    # lee Snowflake si existe .streamlit/secrets.toml
+python "2. Scripts/07_export_dashboard_data.py"   # actualiza la copia de respaldo
 ```
 
 Páginas:
