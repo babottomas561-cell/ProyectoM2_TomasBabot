@@ -1,0 +1,215 @@
+2026-11-17 11:18:52,725 - INFO - Iniciando ETL - batch 1794925132 - modo completo
+2026-11-17 11:18:52,790 - INFO - Conectado a PostgreSQL
+2026-11-17 11:18:52,960 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:18:52,961 - INFO - Starting Snowflake login process
+2026-11-17 11:18:52,962 - INFO - outbound HTTP call method=PUT host=169.254.169.254 path=/latest/api/token
+2026-11-17 11:18:52,962 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: No route to host (os error 65) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 65, kind: HostUnreachable, message: "No route to host" })) }, connection: Unknown } }) }))
+2026-11-17 11:18:52,963 - INFO - outbound HTTP call method=POST path=/session/v1/login-request attempt=1
+2026-11-17 11:18:52,963 - INFO - outbound HTTP call method=PUT host=169.254.169.254 path=/latest/api/token
+2026-11-17 11:18:52,963 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: Host is down (os error 64) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 64, kind: Uncategorized, message: "Host is down" })) }, connection: Unknown } }) }))
+2026-11-17 11:18:52,966 - INFO - outbound HTTP call method=PUT host=169.254.169.254 path=/latest/api/token
+2026-11-17 11:18:53,512 - INFO - Snowflake login completed successfully session_id=6452559881 session_validity_secs=3599 master_validity_secs=14399 session_params_count=52 server_version=10.42.101
+2026-11-17 11:18:53,522 - INFO - Conectado a Snowflake
+2026-11-17 11:18:53,522 - INFO - Extrayendo entregas desde 2000-01-01 hasta 2026-11-18...
+2026-11-17 11:18:57,312 - INFO - Extraídas 399,994 entregas
+2026-11-17 11:18:57,312 - INFO - Transformando entregas...
+2026-11-17 11:18:58,435 - INFO - Transformadas 399,994 entregas
+2026-11-17 11:18:58,446 - INFO - Cargando dimensiones...
+2026-11-17 11:18:59,462 - INFO - Executing sync query request_id=cc56de64-dfb2-4546-a719-bc1d2aabe252
+2026-11-17 11:18:59,462 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:18:59,827 - INFO - Executing sync query request_id=48ff066b-eeed-47c8-adbd-3fd768f6a606
+2026-11-17 11:18:59,827 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:02,956 - INFO - Executing sync query request_id=157bf6b4-a2ab-41dc-8fa9-e53cc06366f1
+2026-11-17 11:19:02,956 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:03,337 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:03,346 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/63a5e213-0312-4ea3-9778-cabea7adf1d5/file0.txt
+2026-11-17 11:19:04,060 - INFO - HTTP response status=200
+2026-11-17 11:19:04,064 - INFO - Executing sync query request_id=f10be644-45a6-42e0-b076-8057e1dd2c65
+2026-11-17 11:19:04,064 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:06,074 - INFO - Executing sync query request_id=edc16b2a-6c1a-4f18-9a55-044fd9393bb5
+2026-11-17 11:19:06,075 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:06,219 - INFO - Executing sync query request_id=093a5414-88e2-44ba-be8e-f204baf25208
+2026-11-17 11:19:06,219 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:06,500 - INFO - Executing sync query request_id=399e200c-70a4-4cf0-8264-04c7ce3f8ef8
+2026-11-17 11:19:06,500 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:06,871 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:06,873 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/408eb95b-4016-4fbb-8b78-8e98624cd190/file0.txt
+2026-11-17 11:19:07,337 - INFO - HTTP response status=200
+2026-11-17 11:19:07,339 - INFO - Executing sync query request_id=36290ba4-3a78-42aa-8b17-20e53c88de46
+2026-11-17 11:19:07,339 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:08,843 - INFO - Executing sync query request_id=448759f4-a564-4b74-8ecc-95bf083bb4e9
+2026-11-17 11:19:08,843 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:09,179 - INFO - Executing sync query request_id=d2e33750-cf5b-4f28-aaab-f422b192cff9
+2026-11-17 11:19:09,179 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:09,383 - INFO - Executing sync query request_id=eb9fdc23-ca86-414f-a61a-a209403e49b0
+2026-11-17 11:19:09,383 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:09,779 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:09,781 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/31536332-0e00-4875-8076-432516b526cf/file0.txt
+2026-11-17 11:19:10,038 - INFO - HTTP response status=200
+2026-11-17 11:19:10,041 - INFO - Executing sync query request_id=3754f697-054e-42b0-94c6-ddf06c390e4a
+2026-11-17 11:19:10,041 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:11,583 - INFO - Executing sync query request_id=4a742683-254d-4a88-94c8-011a9c1d4706
+2026-11-17 11:19:11,583 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:12,000 - INFO - Executing sync query request_id=61fe1f1e-294b-490a-9f81-e8f3916e7a5a
+2026-11-17 11:19:12,001 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:12,457 - INFO - Executing sync query request_id=f500a012-9b1c-4be7-86e7-9d3c4843b19e
+2026-11-17 11:19:12,458 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:12,793 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:12,796 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/0c0efb7b-26b8-419f-be23-f7e4f7471627/file0.txt
+2026-11-17 11:19:13,169 - INFO - HTTP response status=200
+2026-11-17 11:19:13,172 - INFO - Executing sync query request_id=4ca9656d-b2d4-4b8a-9510-6508aba89b97
+2026-11-17 11:19:13,172 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:14,362 - INFO - Executing sync query request_id=0e4ffe47-709e-40a2-a237-6b80895ac00b
+2026-11-17 11:19:14,362 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:14,498 - INFO - Executing sync query request_id=c5cfc026-9e06-4871-8376-f0734d2053b1
+2026-11-17 11:19:14,498 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:14,704 - INFO - Executing sync query request_id=994a29c8-cfb7-4590-b3bd-004125476370
+2026-11-17 11:19:14,704 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:14,922 - INFO - Executing sync query request_id=3be0092f-8c2b-4c9b-8d86-3b481a8025e6
+2026-11-17 11:19:14,922 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:15,144 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:15,146 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/ac833781-9298-40c1-97e2-2c790cd5e399/file0.txt
+2026-11-17 11:19:15,551 - INFO - HTTP response status=200
+2026-11-17 11:19:15,554 - INFO - Executing sync query request_id=415ace92-63af-43b2-99e9-ebbb43a08a84
+2026-11-17 11:19:15,554 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:16,645 - INFO - dim_driver: 400 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 11:19:17,234 - INFO - Executing sync query request_id=5f43fb46-89ee-48ae-8775-8f9d4caccf36
+2026-11-17 11:19:17,234 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:17,819 - INFO - Executing sync query request_id=090cb589-8262-4e13-982c-536eaecc9f7e
+2026-11-17 11:19:17,819 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:18,398 - INFO - Executing sync query request_id=525b644b-60c3-44e3-9ab6-94e3407fe74a
+2026-11-17 11:19:18,398 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:19,533 - INFO - Executing sync query request_id=395971d9-12da-422f-8166-f0dd3f695a3b
+2026-11-17 11:19:19,533 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:20,315 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:20,321 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/57eb29c5-3a83-4664-b7a4-98c9fbf9f700/file0.txt
+2026-11-17 11:19:27,837 - INFO - HTTP response status=200
+2026-11-17 11:19:27,843 - INFO - Executing sync query request_id=32163a44-7847-4ae2-bb8c-4bd26e1fda0b
+2026-11-17 11:19:27,843 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:31,807 - INFO - dim_customer: 373,139 clientes nuevos
+2026-11-17 11:19:31,820 - INFO - Dimensiones actualizadas
+2026-11-17 11:19:31,820 - INFO - Cargando tabla de hechos...
+2026-11-17 11:19:31,821 - INFO - Executing sync query request_id=26cda0cd-f9d4-4257-9178-c6b1c209df2c
+2026-11-17 11:19:31,821 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:32,210 - INFO - Executing sync query request_id=ba6bd8c9-6da5-4fac-8a54-d76837cfd54a
+2026-11-17 11:19:32,211 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:33,228 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_3_1 attempt=1
+2026-11-17 11:19:33,228 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_2_1 attempt=1
+2026-11-17 11:19:33,228 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_1_1 attempt=1
+2026-11-17 11:19:33,228 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_4_1 attempt=1
+2026-11-17 11:19:33,837 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_5_1 attempt=1
+2026-11-17 11:19:33,995 - INFO - outbound HTTP call method=GET path=https://sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com/oxrb2000-s/results/b077/01c8791b-0001-daaf-0000-0001809a50c1_0/main/data_0_0_6_1 attempt=1
+2026-11-17 11:19:38,940 - INFO - Executing sync query request_id=9d11e6ec-f435-4941-a6d9-d82c4f1497ad
+2026-11-17 11:19:38,941 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:39,433 - INFO - Executing sync query request_id=e978f2e0-eb7e-4a0d-b2c1-9ce2b0288036
+2026-11-17 11:19:39,433 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:41,116 - INFO - Executing sync query request_id=157ea990-fb90-4a62-acbf-b30e8e8032a1
+2026-11-17 11:19:41,116 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:41,346 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:19:41,357 - INFO - outbound HTTP call method=PUT host=sfc-br-ds1-12-customer-stage.s3.sa-east-1.amazonaws.com path=/oxrb2000-s/stages/648dc7de-c563-4ee9-ba57-096715d36d90/file0.txt
+2026-11-17 11:19:50,018 - INFO - HTTP response status=200
+2026-11-17 11:19:50,023 - INFO - Executing sync query request_id=1812168e-8b3c-45cf-afc3-77b0caf7e447
+2026-11-17 11:19:50,023 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:56,521 - INFO - Cargadas 399,994 filas en fact_deliveries
+2026-11-17 11:19:56,556 - INFO - Executing sync query request_id=a22aaba7-f23c-4977-b035-85d5285c52c8
+2026-11-17 11:19:56,556 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:56,803 - INFO - Executing sync query request_id=3035dbe3-c8ae-4b72-9131-7a8240413485
+2026-11-17 11:19:56,803 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:57,298 - INFO - Executing sync query request_id=8619a581-fa04-4dd6-b5f7-e2ad97bd65e0
+2026-11-17 11:19:57,298 - INFO - outbound HTTP call method=POST path=/queries/v1/query-request attempt=1
+2026-11-17 11:19:58,598 - INFO - Totales diarios calculados
+2026-11-17 11:19:58,600 - INFO - Closing connection
+2026-11-17 11:19:58,600 - INFO - Sending logout: auto-detection found no running async queries
+2026-11-17 11:19:58,906 - INFO - Initiating session logout
+2026-11-17 11:19:58,906 - INFO - outbound HTTP call method=POST path=/session attempt=1
+2026-11-17 11:19:59,057 - INFO - Session logout completed successfully
+2026-11-17 11:19:59,058 - INFO - Logout completed successfully
+2026-11-17 11:19:59,059 - INFO - Connection closed successfully
+2026-11-17 11:19:59,059 - INFO - Conexiones cerradas
+2026-11-17 11:19:59,060 - INFO - ETL terminado en 66.3 s - métricas: {"records_extracted": 399994, "records_rejected": 0, "records_transformed": 399994, "records_loaded": 399994, "errors": 0}
+2026-11-17 11:20:18,525 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:20:42,176 - INFO - Iniciando ETL - batch 1794925242 - modo incremental
+2026-11-17 11:20:42,217 - INFO - Conectado a PostgreSQL
+2026-11-17 11:20:42,389 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:20:42,982 - INFO - Conectado a Snowflake
+2026-11-17 11:20:42,982 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 11:20:43,029 - INFO - Extraídas 257 entregas
+2026-11-17 11:20:43,029 - INFO - Transformando entregas...
+2026-11-17 11:20:43,037 - INFO - Transformadas 257 entregas
+2026-11-17 11:20:43,037 - INFO - Cargando dimensiones...
+2026-11-17 11:20:45,537 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:20:48,402 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:20:51,285 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:20:53,649 - INFO - dim_driver: 0 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 11:20:58,721 - INFO - Dimensiones actualizadas
+2026-11-17 11:20:58,721 - INFO - Cargando tabla de hechos...
+2026-11-17 11:21:06,028 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:08,233 - INFO - Cargadas 257 filas en fact_deliveries
+2026-11-17 11:21:10,479 - INFO - Totales diarios calculados
+2026-11-17 11:21:10,845 - INFO - Conexiones cerradas
+2026-11-17 11:21:10,845 - INFO - ETL terminado en 28.7 s - métricas: {"records_extracted": 257, "records_rejected": 0, "records_transformed": 257, "records_loaded": 257, "errors": 0}
+2026-11-17 11:21:11,880 - INFO - Iniciando ETL - batch 1794925271 - modo incremental
+2026-11-17 11:21:11,925 - INFO - Conectado a PostgreSQL
+2026-11-17 11:21:12,145 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:12,566 - INFO - Conectado a Snowflake
+2026-11-17 11:21:12,566 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 11:21:12,614 - INFO - Extraídas 257 entregas
+2026-11-17 11:21:12,614 - INFO - Transformando entregas...
+2026-11-17 11:21:12,622 - INFO - Transformadas 257 entregas
+2026-11-17 11:21:12,622 - INFO - Cargando dimensiones...
+2026-11-17 11:21:15,539 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:17,797 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:20,453 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:23,155 - INFO - dim_driver: 0 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 11:21:26,220 - INFO - Dimensiones actualizadas
+2026-11-17 11:21:26,221 - INFO - Cargando tabla de hechos...
+2026-11-17 11:21:29,662 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:21:31,456 - INFO - Cargadas 257 filas en fact_deliveries
+2026-11-17 11:21:33,260 - INFO - Totales diarios calculados
+2026-11-17 11:21:33,456 - INFO - Conexiones cerradas
+2026-11-17 11:21:33,456 - INFO - ETL terminado en 21.6 s - métricas: {"records_extracted": 257, "records_rejected": 0, "records_transformed": 257, "records_loaded": 257, "errors": 0}
+2026-11-17 11:21:34,558 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:37,342 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:37,357 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: No route to host (os error 65) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 65, kind: HostUnreachable, message: "No route to host" })) }, connection: Unknown } }) }))
+2026-11-17 11:23:37,358 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: Host is down (os error 64) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 64, kind: Uncategorized, message: "Host is down" })) }, connection: Unknown } }) }))
+2026-11-17 11:23:44,408 - INFO - Iniciando ETL - batch 1794925424 - modo incremental
+2026-11-17 11:23:44,418 - INFO - Conectado a PostgreSQL
+2026-11-17 11:23:44,427 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:44,984 - INFO - Conectado a Snowflake
+2026-11-17 11:23:44,985 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 11:23:45,034 - INFO - Extraídas 257 entregas
+2026-11-17 11:23:45,035 - INFO - Transformando entregas...
+2026-11-17 11:23:45,048 - INFO - Transformadas 257 entregas
+2026-11-17 11:23:45,049 - INFO - Cargando dimensiones...
+2026-11-17 11:23:47,487 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:50,675 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:53,469 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:23:55,933 - INFO - dim_driver: 0 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 11:23:58,637 - INFO - Dimensiones actualizadas
+2026-11-17 11:23:58,638 - INFO - Cargando tabla de hechos...
+2026-11-17 11:24:01,975 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:03,607 - INFO - Cargadas 257 filas en fact_deliveries
+2026-11-17 11:24:05,573 - INFO - Totales diarios calculados
+2026-11-17 11:24:05,837 - INFO - Conexiones cerradas
+2026-11-17 11:24:05,838 - INFO - ETL terminado en 21.4 s - métricas: {"records_extracted": 257, "records_rejected": 0, "records_transformed": 257, "records_loaded": 257, "errors": 0}
+2026-11-17 11:24:06,454 - INFO - Iniciando ETL - batch 1794925446 - modo incremental
+2026-11-17 11:24:06,461 - INFO - Conectado a PostgreSQL
+2026-11-17 11:24:06,467 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:06,891 - INFO - Conectado a Snowflake
+2026-11-17 11:24:06,892 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 11:24:06,938 - INFO - Extraídas 257 entregas
+2026-11-17 11:24:06,939 - INFO - Transformando entregas...
+2026-11-17 11:24:06,951 - INFO - Transformadas 257 entregas
+2026-11-17 11:24:06,951 - INFO - Cargando dimensiones...
+2026-11-17 11:24:09,497 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:12,151 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:15,467 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:18,368 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:20,134 - INFO - dim_driver: 1 versiones nuevas, 1 cerradas (SCD2)
+2026-11-17 11:24:22,285 - INFO - Dimensiones actualizadas
+2026-11-17 11:24:22,286 - INFO - Cargando tabla de hechos...
+2026-11-17 11:24:25,523 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 11:24:27,060 - INFO - Cargadas 257 filas en fact_deliveries
+2026-11-17 11:24:29,471 - INFO - Totales diarios calculados
+2026-11-17 11:24:29,732 - INFO - Conexiones cerradas
+2026-11-17 11:24:29,732 - INFO - ETL terminado en 23.3 s - métricas: {"records_extracted": 257, "records_rejected": 0, "records_transformed": 257, "records_loaded": 257, "errors": 0}

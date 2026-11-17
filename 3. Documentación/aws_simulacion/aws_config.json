@@ -1,0 +1,16 @@
+{
+  "region": "us-east-1",
+  "rds_instance": "fleetlogix-db",
+  "s3_bucket": "fleetlogix-data",
+  "dynamodb_tables": [
+    "deliveries_status",
+    "vehicle_tracking",
+    "routes_waypoints",
+    "alerts_history"
+  ],
+  "alerts_topic_arn": "arn:aws:sns:us-east-1:123456789012:fleetlogix-alerts",
+  "lambda_role_arn": "arn:aws:iam::123456789012:role/FleetLogixLambdaRole",
+  "initial_snapshot": "fleetlogix-initial-20261117113633",
+  "migration_script": "migrate_to_rds.sh",
+  "timestamp": "2026-11-17T11:36:33.877691"
+}

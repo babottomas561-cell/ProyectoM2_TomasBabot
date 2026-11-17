@@ -1,0 +1,17 @@
+# Entorno usado: Python 3.11 (conda env anaconda-ml-ai)
+pandas>=2.0
+numpy>=1.26
+faker>=30.0
+psycopg2-binary>=2.9
+sqlalchemy>=2.0
+tqdm
+tabulate
+matplotlib
+openpyxl
+python-dotenv
+schedule
+snowflake-connector-python[pandas]>=3.0   # incluye pyarrow para write_pandas
+boto3
+moto>=5.0                                 # AWS simulado para el Avance 4
+jupyter
+nbformat
