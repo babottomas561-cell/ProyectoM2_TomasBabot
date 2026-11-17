@@ -43,7 +43,9 @@ st.markdown("""
   .lectura { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 0.75rem 1rem;
              color: #78350F; font-size: 0.92rem; margin-bottom: 0.5rem; }
   .nota { color: #6B7280; font-size: 0.82rem; }
-  [data-testid="stMetricValue"] { font-size: 1.55rem; font-weight: 600; }
+  /* El número del indicador se achica en pantallas angostas para que no se corte con "..." */
+  [data-testid="stMetricValue"] { font-size: clamp(1.05rem, 1.75vw, 1.55rem); font-weight: 600; }
+  [data-testid="stMetricValue"] > div { overflow: visible; text-overflow: clip; }
   [data-testid="stSidebar"] .pie { color: #94A3B8; font-size: 0.78rem; }
   [data-testid="stSidebar"] .punto { color: #94A3B8; }
   [data-testid="stSidebar"] .punto.vivo { color: #22C55E; }
