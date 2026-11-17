@@ -2,6 +2,8 @@
 
 **Tomás Babot** · Data Science · Soy Henry
 
+**Tablero online:** https://fleetlogix-tomasbabot.streamlit.app
+
 FleetLogix es una empresa de transporte y logística con 200 vehículos que opera en 5 ciudades de Colombia.
 Trabajaba con sistemas viejos y planillas de cálculo, y la consigna era modernizar toda su infraestructura de datos.
 Lo hice en 4 avances:
@@ -193,7 +195,8 @@ Para eso dejé las Lambda fuera de la VPC y el ETL corre en una EC2 chica.
 
 ![Tablero FleetLogix](3.%20Documentación/img/dashboard_resumen.png)
 
-Para mostrar los resultados armé un tablero con Streamlit y Plotly. No lee la base operativa: usa el Data Warehouse de Snowflake.
+Para mostrar los resultados armé un tablero con Streamlit y Plotly, publicado en Streamlit Community Cloud:
+**https://fleetlogix-tomasbabot.streamlit.app**. No lee la base operativa: usa el Data Warehouse de Snowflake.
 El script `07_export_dashboard_data.py` resume `fact_deliveries` por día, ciudad, tipo de vehículo y turno (41.985 filas),
 calcula los totales de cada conductor y guarda todo en `dashboard/data/`. Así el tablero se abre sin credenciales de Snowflake.
 
