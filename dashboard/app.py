@@ -44,7 +44,10 @@ st.markdown("""
              color: #78350F; font-size: 0.92rem; margin-bottom: 0.5rem; }
   .nota { color: #6B7280; font-size: 0.82rem; }
   /* El número del indicador se achica en pantallas angostas para que no se corte con "..." */
-  [data-testid="stMetricValue"] { font-size: clamp(1.05rem, 1.75vw, 1.55rem); font-weight: 600; }
+  /* Texto del indicador según el ancho de su propia tarjeta (unidades cqi), para que no se corte con "..." */
+  [data-testid="stMetric"] { container-type: inline-size; }
+  [data-testid="stMetricValue"] { font-size: clamp(0.85rem, 17cqi, 1.55rem); font-weight: 600; }
+  [data-testid="stMetricLabel"] p { font-size: clamp(0.72rem, 11cqi, 0.875rem); }
   [data-testid="stMetricValue"] > div { overflow: visible; text-overflow: clip; }
   [data-testid="stSidebar"] .pie { color: #94A3B8; font-size: 0.78rem; }
   [data-testid="stSidebar"] .punto { color: #94A3B8; }
