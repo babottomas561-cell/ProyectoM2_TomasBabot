@@ -53,37 +53,56 @@ st.markdown("""
 
 
 # ================================================================ Datos
-def leer_snowflake():
-    """Lee el Data Warehouse en vivo. Devuelve None si no hay credenciales (por ejemplo al correrlo en otra compu).
-    Las credenciales están en los Secrets de Streamlit (.streamlit/secrets.toml en local, que no se sube al repo).
-    Uso un usuario de solo lectura de Snowflake con su propio par de llaves, no mi usuario."""
+def hay_credenciales():
+    """True si hay credenciales de Snowflake en los Secrets de Streamlit (.streamlit/secrets.toml en local,
+    que no se sube al repo, o Settings > Secrets en Streamlit Cloud)."""
     try:
-        cred = dict(st.secrets['snowflake'])
-    except (KeyError, FileNotFoundError):
-        return None
-    import snowflake.connector
-    from cryptography.hazmat.primitives import serialization
-    llave = serialization.load_pem_private_key(cred.pop('private_key').encode(), password=None)
-    cred['private_key'] = llave.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8,
-                                              serialization.NoEncryption())
-    with snowflake.connector.connect(**cred, login_timeout=20, network_timeout=60) as conexion:
-        return leer(conexion, 'entregas_diarias'), leer(conexion, 'conductores')
+        return 'snowflake' in st.secrets
+    except FileNotFoundError:
+        return False
 
 
 @st.cache_data(ttl='1h', show_spinner='Leyendo el Data Warehouse en Snowflake...')
+def leer_snowflake():
+    """Lee el Data Warehouse en vivo con un usuario de solo lectura que tiene su propio par de llaves (no mi usuario).
+    Guardo el resultado una hora para no prender el warehouse (y gastar créditos) en cada visita.
+    Si falla, Streamlit no guarda el error en la caché: la próxima vez lo vuelve a intentar."""
+    import snowflake.connector
+    from cryptography.hazmat.primitives import serialization
+    cred = dict(st.secrets['snowflake'])
+    llave = serialization.load_pem_private_key(cred.pop('private_key').strip().encode(), password=None)
+    cred['private_key'] = llave.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8,
+                                              serialization.NoEncryption())
+    with snowflake.connector.connect(**cred, login_timeout=20, network_timeout=60) as conexion:
+        return leer(conexion, 'entregas_diarias'), leer(conexion, 'conductores'), datetime.now(ZoneInfo('America/Bogota'))
+
+
+@st.cache_data
+def leer_copia():
+    return pd.read_parquet(DATOS / 'entregas_diarias.parquet'), pd.read_parquet(DATOS / 'conductores.parquet')
+
+
 def cargar_datos():
-    """Datos del tablero: de Snowflake en vivo si se puede, si no de la copia en parquet.
-    Guardo el resultado una hora para no prender el warehouse de Snowflake (y gastar créditos) en cada visita."""
-    fuente = {'vivo': False, 'hora': datetime.now(ZoneInfo('America/Bogota')), 'error': None}
-    try:
-        leido = leer_snowflake()
-    except Exception as e:  # sin conexión, prueba vencida, llave revocada...: sigo con la copia
-        leido, fuente['error'] = None, type(e).__name__
-    if leido is not None:
-        (entregas, conductores), fuente['vivo'] = leido, True
-    else:
-        entregas = pd.read_parquet(DATOS / 'entregas_diarias.parquet')
-        conductores = pd.read_parquet(DATOS / 'conductores.parquet')
+    """Datos del tablero: de Snowflake en vivo si se puede, si no de la copia en parquet."""
+    fuente = {'vivo': False, 'hora': None, 'error': None}
+    # Si Snowflake falló hace poco en esta sesión no lo reintento en cada clic (cada intento puede tardar 20 segundos)
+    fallo_reciente = st.session_state.get('fallo_snowflake', 0) > datetime.now().timestamp() - 600
+    if hay_credenciales() and not fallo_reciente:
+        try:
+            entregas, conductores, fuente['hora'] = leer_snowflake()
+            fuente['vivo'] = True
+        except Exception as e:  # sin conexión, prueba vencida, llave revocada...: sigo con la copia
+            fuente['error'] = type(e).__name__
+            st.session_state['fallo_snowflake'] = datetime.now().timestamp()
+    elif fallo_reciente:
+        fuente['error'] = 'reciente'
+    if not fuente['vivo']:
+        entregas, conductores = leer_copia()
+    return (*preparar(entregas, conductores), fuente)
+
+
+@st.cache_data
+def preparar(entregas, conductores):
     # Saco los días incompletos de los bordes: el primero y los últimos tienen viajes que todavía no terminaron
     # (por ejemplo 23 entregas el último día contra ~550 de un día normal) y bajarían los totales y las comparaciones.
     por_dia = entregas.groupby('fecha')['entregas'].sum()
@@ -94,7 +113,7 @@ def cargar_datos():
     entregas['mes'] = entregas['fecha'].dt.to_period('M').dt.to_timestamp()
     entregas['dia'] = pd.Categorical(entregas['fecha'].dt.dayofweek.map(dict(enumerate(DIAS))), DIAS, ordered=True)
     entregas['turno'] = entregas['turno'].map(TURNOS)
-    return entregas, conductores, dias_excluidos, fuente
+    return entregas, conductores, dias_excluidos
 
 
 def resumen(df, por=None):
@@ -212,7 +231,7 @@ with st.sidebar:
                 f'Sin los días incompletos: {excluidos}<br>'
                 f'{numero(len(entregas))} filas resumidas de fact_deliveries</div>', unsafe_allow_html=True)
     if fuente['vivo'] and st.button('Volver a leer Snowflake', icon=':material/refresh:', type='tertiary'):
-        cargar_datos.clear()
+        leer_snowflake.clear()
         st.rerun()
 
 
