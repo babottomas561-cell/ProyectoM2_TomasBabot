@@ -12,6 +12,7 @@ Lo hice en 4 avances:
 | 2 | Analicé 8 queries de negocio y las optimicé con índices | el tiempo total bajó 74,4% con 5 índices (77,3% con el ajuste para SSD) |
 | 3 | Diseñé un Data Warehouse en Snowflake y un ETL automático | cargué 399.994 hechos y coinciden con la base de origen |
 | 4 | Analicé y mejoré la arquitectura en AWS | probé todo en un AWS simulado; el costo estimado es de US$ 35 por mes (el tope era US$ 50) |
+| Extra | Armé un tablero en Streamlit con los datos del Data Warehouse | 7 páginas con filtros, comparación contra el año anterior, descarga de datos y un explorador libre |
 
 ## 1. Cómo está organizado el repositorio
 
@@ -30,6 +31,7 @@ ProyectoM2_TomasBabot/
 │   ├── 04_dimensional_model.sql       modelo estrella en Snowflake
 │   ├── 05_etl_pipeline.py             ETL de PostgreSQL a Snowflake
 │   ├── 06_aws_setup.py                creación de la infraestructura AWS (mi versión corregida)
+│   ├── 07_export_dashboard_data.py    baja de Snowflake los datos que usa el tablero
 │   ├── lambda_functions/              las 3 funciones Lambda
 │   └── aws_architecture_diagram.png   diagrama de arquitectura
 ├── 3. Documentación/
@@ -39,6 +41,11 @@ ProyectoM2_TomasBabot/
 │   ├── data_dictionary.xlsx
 │   ├── img/                           diagramas y gráficos
 │   └── aws_simulacion/                archivos que genera la simulación de AWS
+├── dashboard/                         tablero en Streamlit (extra)
+│   ├── app.py
+│   ├── data/                          datos exportados del Data Warehouse (parquet)
+│   └── requirements.txt
+├── .streamlit/config.toml             colores y fuente del tablero
 ├── requirements.txt
 └── .env.example                       variables de conexión (el .env real no lo subo)
 ```
@@ -182,7 +189,36 @@ de desvío llega por SNS. También definí 8 alarmas de CloudWatch.
 **Costo estimado: US$ 35,03 por mes.** Lo que más ahorra es no usar NAT Gateway, que sale unos US$ 32 por mes.
 Para eso dejé las Lambda fuera de la VPC y el ETL corre en una EC2 chica.
 
-## 7. Decisiones y limitaciones
+## 7. Extra: tablero en Streamlit
+
+![Tablero FleetLogix](3.%20Documentación/img/dashboard_resumen.png)
+
+Para mostrar los resultados armé un tablero con Streamlit y Plotly. No lee la base operativa: usa el Data Warehouse de Snowflake.
+El script `07_export_dashboard_data.py` resume `fact_deliveries` por día, ciudad, tipo de vehículo y turno (41.985 filas),
+calcula los totales de cada conductor y guarda todo en `dashboard/data/`. Así el tablero se abre sin credenciales de Snowflake.
+
+```bash
+python "2. Scripts/07_export_dashboard_data.py"   # solo si quiero actualizar los datos
+streamlit run dashboard/app.py
+```
+
+Páginas:
+
+- **Resumen:** 5 indicadores con su evolución y la variación contra el mismo período del año anterior, una lectura automática
+  según los filtros, entregas mensuales 2026 contra 2025, ingreso y costo, y margen por ciudad.
+- **Ciudades:** mapa con el volumen de cada ciudad, entregas, margen y una tabla de detalle.
+- **Flota:** margen, entregas, consumo y carga por tipo de vehículo. Ahí explico por qué la moto da pérdida.
+- **Puntualidad:** mapa de calor por día y turno, puntualidad por turno y minutos por entrega en cada ciudad.
+- **Conductores:** puntualidad contra cantidad de entregas de cada conductor y un ranking que se puede ordenar.
+- **Explorador:** con PyGWalker cualquiera puede armar sus propios gráficos arrastrando columnas, parecido a Tableau.
+- **Modelo de datos:** de dónde salen los datos y el modelo estrella.
+
+Los filtros de la barra lateral (período o rango de fechas, ciudad, tipo de vehículo y turno) valen para todas las páginas,
+y cada gráfico tiene una pestaña "Datos" para ver la tabla y bajarla en CSV.
+Dejé afuera el primer día y los dos últimos de los datos porque tienen viajes que todavía no terminaron
+(el último día tiene 23 entregas contra unas 550 de un día normal). Si no, bajaban los totales y las comparaciones.
+
+## 8. Decisiones y limitaciones
 
 - **Elegí estrella y no copo de nieve** porque los analistas necesitan menos JOIN y Snowflake responde más rápido.
 - **DynamoDB para el tiempo real y RDS para lo transaccional:** DynamoDB responde en milisegundos buscando por clave y se paga por uso.
@@ -192,7 +228,7 @@ Para eso dejé las Lambda fuera de la VPC y el ETL corre en una EC2 chica.
   en la base de origen y lo asigné de forma sintética.
 - **Precios de AWS:** usé los precios de lista de us-east-1 y son aproximados. Antes de implementar habría que confirmarlos con AWS Pricing Calculator.
 
-## 8. Herramientas
+## 9. Herramientas
 
-Python (pandas, numpy, Faker, psycopg2, SQLAlchemy, matplotlib, schedule, boto3, moto), PostgreSQL 18, Snowflake,
+Python (pandas, numpy, Faker, psycopg2, SQLAlchemy, matplotlib, schedule, boto3, moto, Streamlit, Plotly, PyGWalker), PostgreSQL 18, Snowflake,
 AWS (API Gateway, Lambda, DynamoDB, RDS, S3, SNS, CloudWatch, IAM, KMS, Secrets Manager), Jupyter y Git.

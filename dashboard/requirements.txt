@@ -1,0 +1,6 @@
+# Solo lo que necesita el tablero (lo usa Streamlit Community Cloud para instalarlo)
+streamlit>=1.67
+pandas>=2.0
+plotly>=6.0
+pyarrow>=15
+pygwalker==0.5.0.1
