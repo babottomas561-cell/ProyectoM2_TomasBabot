@@ -1,5 +1,7 @@
 # Proyecto Integrador M2 - FleetLogix
 
+[![CI](https://github.com/babottomas561-cell/ProyectoM2_TomasBabot/actions/workflows/ci.yml/badge.svg)](https://github.com/babottomas561-cell/ProyectoM2_TomasBabot/actions/workflows/ci.yml)
+
 **Tomás Babot** · Data Science · Soy Henry
 
 **Tablero online:** https://fleetlogix-tomasbabot.streamlit.app
@@ -15,6 +17,7 @@ Lo hice en 4 avances:
 | 3 | Diseñé un Data Warehouse en Snowflake y un ETL automático | cargué 399.996 hechos y coinciden con la base de origen |
 | 4 | Analicé y mejoré la arquitectura en AWS | probé todo en un AWS simulado; el costo estimado es de US$ 35 por mes (el tope era US$ 50) |
 | Extra | Armé un tablero en Streamlit con los datos del Data Warehouse | 7 páginas con filtros, comparación contra el año anterior, descarga de datos y un explorador libre |
+| Extra | Sumé integración continua con GitHub Actions | en cada push se revisa que compilen todos los scripts y se prueban las 3 Lambda en un AWS simulado |
 
 ## 1. Cómo está organizado el repositorio
 
@@ -49,6 +52,8 @@ ProyectoM2_TomasBabot/
 │   ├── usuario_lectura_snowflake.sql  usuario de solo lectura que usa el tablero
 │   ├── data/                          copia de respaldo del Data Warehouse (parquet)
 │   └── requirements.txt
+├── tests/test_lambdas.py              pruebas de las 3 Lambda con moto
+├── .github/workflows/ci.yml           integración continua (GitHub Actions)
 ├── .streamlit/config.toml             colores y fuente del tablero
 ├── requirements.txt
 └── .env.example                       variables de conexión (el .env real no lo subo)
@@ -270,4 +275,8 @@ Dejé afuera el primer día y los dos últimos de los datos porque tienen viajes
 ## 9. Herramientas
 
 Python (pandas, numpy, Faker, psycopg2, SQLAlchemy, matplotlib, schedule, boto3, moto, Streamlit, Plotly, PyGWalker), PostgreSQL 18, Snowflake,
-AWS (API Gateway, Lambda, DynamoDB, RDS, S3, SNS, CloudWatch, IAM, KMS, Secrets Manager), Jupyter y Git.
+AWS (API Gateway, Lambda, DynamoDB, RDS, S3, SNS, CloudWatch, IAM, KMS, Secrets Manager), Jupyter, Git, pytest y GitHub Actions.
+
+**Integración continua:** con cada push a main, GitHub Actions instala las dependencias, revisa que compilen todos los scripts
+y corre `tests/test_lambdas.py`. Ahí están las mismas pruebas de las Lambda que hice en el notebook del Avance 4, con `moto`,
+así que no necesita PostgreSQL, Snowflake ni ninguna credencial. Se pueden correr en local con `pytest -v`.

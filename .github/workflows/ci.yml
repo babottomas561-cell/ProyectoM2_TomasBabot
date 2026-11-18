@@ -1,0 +1,37 @@
+# Integración continua: en cada push o pull request a main revisa que todos los scripts
+# compilen y prueba las 3 Lambda en un AWS simulado (moto). No usa PostgreSQL ni Snowflake,
+# así que no necesita ninguna credencial.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            dashboard/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r dashboard/requirements.txt
+
+      - name: Verificar que los scripts compilan
+        run: |
+          python -m py_compile "2. Scripts/"*.py "2. Scripts/lambda_functions/"*.py dashboard/*.py
+          echo "Todos los scripts compilan"
+
+      - name: Probar las Lambda con moto
+        run: pytest tests/ -v
