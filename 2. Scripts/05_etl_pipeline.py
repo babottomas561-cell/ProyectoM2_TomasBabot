@@ -70,10 +70,14 @@ if _llave:
 else:
     SNOWFLAKE_CONFIG['password'] = os.getenv('SNOWFLAKE_PASSWORD')
 
-# Supuestos de negocio (los mismos que traía el script base de Henry), en pesos colombianos
-COSTO_LITRO_COMBUSTIBLE = 5000
+# Supuestos de negocio, en pesos colombianos (COP). El script base usaba un solo precio de
+# combustible (5.000) y cobraba igual 1 kg a 100 km que a 1.000 km: los ajusté a valores reales.
+PRECIO_LITRO = {'diesel': 2900, 'gasolina': 4200}        # ACPM y gasolina en Colombia, 2025-2026
+FACTOR_PEAJE = {'Motocicleta': 0, 'Van': 1, 'Camión Mediano': 2, 'Camión Grande': 3}  # las motos no pagan peaje
+COSTO_HORA_CONDUCTOR = 14000                              # salario + prestaciones por hora de viaje
 INGRESO_BASE_ENTREGA = 20000
-INGRESO_POR_KG = 500
+TARIFA_KG = 150                                           # por kg, más
+TARIFA_KG_KM = 0.55                                       # por kg y por km de la ruta
 MINUTOS_TOLERANCIA = 30          # una entrega es "a tiempo" si llega hasta 30 min tarde
 
 # Feriados nacionales de fecha fija en Colombia (los móviles no se incluyen, simplificación)
@@ -147,11 +151,13 @@ class FleetLogixETL:
                    t.vehicle_id, t.driver_id, t.route_id,
                    t.departure_datetime, t.arrival_datetime,
                    t.fuel_consumed_liters, t.total_weight_kg,
-                   r.distance_km, r.toll_cost, r.destination_city,
+                   v.vehicle_type, v.fuel_type,
+                   r.distance_km, r.toll_cost, r.origin_city, r.destination_city,
                    (SELECT COUNT(*) FROM deliveries d2 WHERE d2.trip_id = d.trip_id) AS deliveries_in_trip
             FROM deliveries d
             JOIN trips  t ON d.trip_id  = t.trip_id
             JOIN routes r ON t.route_id = r.route_id
+            JOIN vehicles v ON t.vehicle_id = v.vehicle_id
             WHERE d.delivery_status = 'delivered'
               AND d.scheduled_datetime >= %s
               AND d.scheduled_datetime <  %s
@@ -218,11 +224,16 @@ class FleetLogixETL:
         # Combustible y distancia son del VIAJE: se reparten entre sus entregas para que
         # al sumar la tabla de hechos no se cuenten varias veces (métrica aditiva)
         df['fuel_efficiency_km_per_liter'] = (df['distance_km'] / df['fuel_consumed_liters']).round(2)
-        df['cost_per_delivery'] = ((df['fuel_consumed_liters'] * COSTO_LITRO_COMBUSTIBLE + df['toll_cost'])
-                                   / df['deliveries_in_trip']).round(2)
+        # Costo del viaje = combustible + peajes + horas del conductor; se reparte entre sus entregas
+        costo_viaje = (df['fuel_consumed_liters'] * df['fuel_type'].map(PRECIO_LITRO)
+                       + df['toll_cost'] * df['vehicle_type'].map(FACTOR_PEAJE)
+                       + horas_viaje * COSTO_HORA_CONDUCTOR)
+        df['cost_per_delivery'] = (costo_viaje / df['deliveries_in_trip']).round(2)
+        # Ingreso: un cargo fijo más una tarifa por kg que crece con la distancia de la ruta
+        df['revenue_per_delivery'] = (INGRESO_BASE_ENTREGA
+                                      + df['package_weight_kg'] * (TARIFA_KG + TARIFA_KG_KM * df['distance_km'])).round(2)
         df['fuel_consumed_liters'] = (df['fuel_consumed_liters'] / df['deliveries_in_trip']).round(2)
         df['distance_km'] = (df['distance_km'] / df['deliveries_in_trip']).round(2)
-        df['revenue_per_delivery'] = (INGRESO_BASE_ENTREGA + df['package_weight_kg'] * INGRESO_POR_KG).round(2)
 
         # Control de calidad: se descartan (y se registran) las filas imposibles
         antes = len(df)
@@ -323,7 +334,7 @@ class FleetLogixETL:
         src['full_name'] = src['first_name'] + ' ' + src['last_name']
         src['experience_months'] = ((pd.Timestamp(hoy) - pd.to_datetime(src['hire_date'])).dt.days // 30).astype(int)
         pct = src['on_time_pct_90d'].astype(float)
-        src['performance_category'] = np.select([pct >= 91, pct >= 89], ['Alto', 'Medio'], 'Bajo')
+        src['performance_category'] = np.select([pct >= 90, pct >= 82], ['Alto', 'Medio'], 'Bajo')
         src.loc[pct.isna(), 'performance_category'] = 'Sin datos'
         src['zone'] = src['zone'].fillna('Sin asignar')
         return src[['driver_id', 'employee_code', 'full_name', 'license_number', 'license_expiry',

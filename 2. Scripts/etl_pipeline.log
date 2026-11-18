@@ -213,3 +213,103 @@
 2026-11-17 11:24:29,471 - INFO - Totales diarios calculados
 2026-11-17 11:24:29,732 - INFO - Conexiones cerradas
 2026-11-17 11:24:29,732 - INFO - ETL terminado en 23.3 s - métricas: {"records_extracted": 257, "records_rejected": 0, "records_transformed": 257, "records_loaded": 257, "errors": 0}
+2026-11-17 16:03:43,555 - INFO - Transformando entregas...
+2026-11-17 16:03:44,852 - INFO - Transformadas 400,000 entregas
+2026-11-17 16:05:10,731 - INFO - Transformando entregas...
+2026-11-17 16:05:12,018 - INFO - Transformadas 399,996 entregas
+2026-11-17 16:07:05,227 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:07:07,829 - INFO - Iniciando ETL - batch 1794942427 - modo completo
+2026-11-17 16:07:07,869 - INFO - Conectado a PostgreSQL
+2026-11-17 16:07:07,870 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:07:08,188 - INFO - Conectado a Snowflake
+2026-11-17 16:07:08,189 - INFO - Extrayendo entregas desde 2000-01-01 hasta 2026-11-18...
+2026-11-17 16:17:34,625 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:37,122 - INFO - Iniciando ETL - batch 1794943057 - modo completo
+2026-11-17 16:17:37,169 - INFO - Conectado a PostgreSQL
+2026-11-17 16:17:37,170 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:38,533 - INFO - Conectado a Snowflake
+2026-11-17 16:17:38,533 - INFO - Extrayendo entregas desde 2000-01-01 hasta 2026-11-18...
+2026-11-17 16:17:42,873 - INFO - Extraídas 399,996 entregas
+2026-11-17 16:17:42,873 - INFO - Transformando entregas...
+2026-11-17 16:17:44,144 - INFO - Transformadas 399,996 entregas
+2026-11-17 16:17:44,163 - INFO - Cargando dimensiones...
+2026-11-17 16:17:46,626 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:49,533 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:51,838 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:53,429 - INFO - dim_driver: 400 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 16:17:54,782 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:17:58,973 - INFO - dim_customer: 58,942 clientes nuevos
+2026-11-17 16:17:58,974 - INFO - Dimensiones actualizadas
+2026-11-17 16:17:58,975 - INFO - Cargando tabla de hechos...
+2026-11-17 16:18:04,051 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:18:23,484 - INFO - Cargadas 399,996 filas en fact_deliveries
+2026-11-17 16:18:25,030 - INFO - Totales diarios calculados
+2026-11-17 16:18:25,249 - INFO - Conexiones cerradas
+2026-11-17 16:18:25,249 - INFO - ETL terminado en 48.1 s - métricas: {"records_extracted": 399996, "records_rejected": 0, "records_transformed": 399996, "records_loaded": 399996, "errors": 0}
+2026-11-17 16:18:41,989 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:18:44,332 - INFO - Iniciando ETL - batch 1794943124 - modo completo
+2026-11-17 16:18:44,379 - INFO - Conectado a PostgreSQL
+2026-11-17 16:18:44,381 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:18:44,728 - INFO - Conectado a Snowflake
+2026-11-17 16:18:44,728 - INFO - Extrayendo entregas desde 2000-01-01 hasta 2026-11-18...
+2026-11-17 16:18:49,664 - INFO - Extraídas 399,996 entregas
+2026-11-17 16:18:49,665 - INFO - Transformando entregas...
+2026-11-17 16:18:51,027 - INFO - Transformadas 399,996 entregas
+2026-11-17 16:18:51,050 - INFO - Cargando dimensiones...
+2026-11-17 16:18:53,495 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:18:57,087 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:18:59,334 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:19:01,281 - INFO - dim_driver: 400 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 16:19:02,522 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:19:04,824 - INFO - dim_customer: 58,942 clientes nuevos
+2026-11-17 16:19:04,828 - INFO - Dimensiones actualizadas
+2026-11-17 16:19:04,829 - INFO - Cargando tabla de hechos...
+2026-11-17 16:19:09,363 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:19:56,456 - INFO - Cargadas 399,996 filas en fact_deliveries
+2026-11-17 16:19:57,792 - INFO - Totales diarios calculados
+2026-11-17 16:19:58,049 - INFO - Conexiones cerradas
+2026-11-17 16:19:58,049 - INFO - ETL terminado en 73.7 s - métricas: {"records_extracted": 399996, "records_rejected": 0, "records_transformed": 399996, "records_loaded": 399996, "errors": 0}
+2026-11-17 16:21:16,118 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:16,122 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: No route to host (os error 65) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 65, kind: HostUnreachable, message: "No route to host" })) }, connection: Unknown } }) }))
+2026-11-17 16:21:16,124 - WARNING - failed to load region from IMDS err=failed to load IMDS session token: dispatch failure: io error: error sending request for url (http://169.254.169.254/latest/api/token): client error (Connect): tcp connect error: Host is down (os error 64) (FailedToLoadToken(FailedToLoadToken { source: DispatchFailure(DispatchFailure { source: ConnectorError { kind: Io, source: reqwest::Error { kind: Request, url: "http://169.254.169.254/latest/api/token", source: hyper_util::client::legacy::Error(Connect, ConnectError("tcp connect error", 169.254.169.254:80, Os { code: 64, kind: Uncategorized, message: "Host is down" })) }, connection: Unknown } }) }))
+2026-11-17 16:21:24,936 - INFO - Iniciando ETL - batch 1794943284 - modo incremental
+2026-11-17 16:21:24,942 - INFO - Conectado a PostgreSQL
+2026-11-17 16:21:24,946 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:25,517 - INFO - Conectado a Snowflake
+2026-11-17 16:21:25,517 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 16:21:25,560 - INFO - Extraídas 774 entregas
+2026-11-17 16:21:25,560 - INFO - Transformando entregas...
+2026-11-17 16:21:25,571 - INFO - Transformadas 774 entregas
+2026-11-17 16:21:25,572 - INFO - Cargando dimensiones...
+2026-11-17 16:21:28,930 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:31,193 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:33,397 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:35,225 - INFO - dim_driver: 0 versiones nuevas, 0 cerradas (SCD2)
+2026-11-17 16:21:36,536 - INFO - Dimensiones actualizadas
+2026-11-17 16:21:36,537 - INFO - Cargando tabla de hechos...
+2026-11-17 16:21:38,941 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:40,557 - INFO - Cargadas 774 filas en fact_deliveries
+2026-11-17 16:21:42,050 - INFO - Totales diarios calculados
+2026-11-17 16:21:42,287 - INFO - Conexiones cerradas
+2026-11-17 16:21:42,287 - INFO - ETL terminado en 17.4 s - métricas: {"records_extracted": 774, "records_rejected": 0, "records_transformed": 774, "records_loaded": 774, "errors": 0}
+2026-11-17 16:21:42,749 - INFO - Iniciando ETL - batch 1794943302 - modo incremental
+2026-11-17 16:21:42,760 - INFO - Conectado a PostgreSQL
+2026-11-17 16:21:42,764 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:43,174 - INFO - Conectado a Snowflake
+2026-11-17 16:21:43,175 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-17 16:21:43,223 - INFO - Extraídas 774 entregas
+2026-11-17 16:21:43,223 - INFO - Transformando entregas...
+2026-11-17 16:21:43,234 - INFO - Transformadas 774 entregas
+2026-11-17 16:21:43,235 - INFO - Cargando dimensiones...
+2026-11-17 16:21:45,673 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:47,921 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:50,379 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:52,972 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:54,154 - INFO - dim_driver: 1 versiones nuevas, 1 cerradas (SCD2)
+2026-11-17 16:21:54,972 - INFO - Dimensiones actualizadas
+2026-11-17 16:21:54,972 - INFO - Cargando tabla de hechos...
+2026-11-17 16:21:56,539 - WARNING - Proxy configuration: using environment variable proxy settings
+2026-11-17 16:21:58,022 - INFO - Cargadas 774 filas en fact_deliveries
+2026-11-17 16:21:59,417 - INFO - Totales diarios calculados
+2026-11-17 16:21:59,582 - INFO - Conexiones cerradas
+2026-11-17 16:21:59,584 - INFO - ETL terminado en 16.8 s - métricas: {"records_extracted": 774, "records_rejected": 0, "records_transformed": 774, "records_loaded": 774, "errors": 0}

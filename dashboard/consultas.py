@@ -7,9 +7,10 @@ Las usan dos programas, por eso están acá y no repetidas:
 """
 import pandas as pd
 
-# Una fila por día, ciudad destino, tipo de vehículo y turno
+# Una fila por día, ciudad de origen, ciudad destino, tipo de vehículo y turno
 SQL_ENTREGAS = """
 SELECT d.full_date                          AS fecha,
+       r.origin_city                        AS origen,
        r.destination_city                   AS ciudad,
        v.vehicle_type                       AS tipo_vehiculo,
        t.shift                              AS turno,
@@ -26,7 +27,7 @@ JOIN dim_date d    ON f.date_key = d.date_key
 JOIN dim_route r   ON f.route_key = r.route_key
 JOIN dim_vehicle v ON f.vehicle_key = v.vehicle_key
 JOIN dim_time t    ON f.scheduled_time_key = t.time_key
-GROUP BY 1, 2, 3, 4
+GROUP BY 1, 2, 3, 4, 5
 """
 
 # Una fila por conductor: suma todas sus versiones (SCD tipo 2) y toma nombre y zona de la versión actual
@@ -43,13 +44,14 @@ WITH por_conductor AS (
     GROUP BY dr.driver_id
 )
 SELECT p.driver_id, a.full_name AS conductor, a.zone AS zona, a.performance_category AS categoria,
+       a.hire_date AS contratado,
        p.entregas, p.entregas_a_tiempo, p.ingreso, p.costo, p.entregas_por_hora
 FROM por_conductor p
 JOIN dim_driver a ON a.driver_id = p.driver_id AND a.is_current
 """
 
 CONSULTAS = {'entregas_diarias': SQL_ENTREGAS, 'conductores': SQL_CONDUCTORES}
-TEXTO = ('fecha', 'ciudad', 'tipo_vehiculo', 'turno', 'conductor', 'zona', 'categoria')
+TEXTO = ('fecha', 'origen', 'ciudad', 'tipo_vehiculo', 'turno', 'conductor', 'zona', 'categoria', 'contratado')
 
 
 def leer(conexion, nombre):
@@ -60,6 +62,7 @@ def leer(conexion, nombre):
     for col in df.columns:
         if col not in TEXTO:
             df[col] = pd.to_numeric(df[col])
-    if 'fecha' in df:
-        df['fecha'] = pd.to_datetime(df['fecha'])
+    for col in ('fecha', 'contratado'):
+        if col in df:
+            df[col] = pd.to_datetime(df[col])
     return df

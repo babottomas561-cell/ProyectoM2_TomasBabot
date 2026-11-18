@@ -11,8 +11,8 @@ Lo hice en 4 avances:
 | Avance | Qué hice | Resultado |
 |---|---|---|
 | 1 | Armé la base PostgreSQL y la llené con datos sintéticos | 505.650 registros, los 12 controles de calidad dieron 0 errores |
-| 2 | Analicé 8 queries de negocio y las optimicé con índices | el tiempo total bajó 74,4% con 5 índices (77,3% con el ajuste para SSD) |
-| 3 | Diseñé un Data Warehouse en Snowflake y un ETL automático | cargué 399.994 hechos y coinciden con la base de origen |
+| 2 | Analicé 8 queries de negocio y las optimicé con índices | el tiempo total bajó 74,6% con 5 índices (76,9% con el ajuste para SSD) |
+| 3 | Diseñé un Data Warehouse en Snowflake y un ETL automático | cargué 399.996 hechos y coinciden con la base de origen |
 | 4 | Analicé y mejoré la arquitectura en AWS | probé todo en un AWS simulado; el costo estimado es de US$ 35 por mes (el tope era US$ 50) |
 | Extra | Armé un tablero en Streamlit con los datos del Data Warehouse | 7 páginas con filtros, comparación contra el año anterior, descarga de datos y un explorador libre |
 
@@ -111,8 +111,26 @@ inserción por lotes con `execute_batch` y una validación al final. Le corregí
 | maintenance | 5.000 |
 | **Total** | **505.650** |
 
-Pasan las 12 reglas de calidad: integridad referencial, fechas coherentes, capacidad y unicidad.
-Las distribuciones dan realistas: la mayoría de los viajes salen entre las 8 y las 11, y alrededor del 90% de las entregas llegan a tiempo.
+Pasan las 12 reglas de calidad: integridad referencial, fechas coherentes, capacidad, que ningún conductor ni vehículo
+esté en dos viajes a la vez y que las motos no hagan rutas largas.
+
+**Patrones de negocio que le agregué al generador.** El script base reparte todo al azar y en forma pareja: el mismo volumen
+todos los días y 90% a tiempo en todas las ciudades. Con datos así el análisis no encuentra nada, así que agregué supuestos
+de una operación real en Colombia:
+
+| Patrón | Cómo lo armé |
+|---|---|
+| Ciudades | Bogotá es el mayor mercado (30% de la demanda) y Cartagena el menor (14%) |
+| Estacionalidad | pico en diciembre (+30%) y noviembre, baja en enero; el domingo casi no se trabaja; feriados con poco volumen |
+| Crecimiento | la empresa crece 12% por año |
+| Flota | cada viaje usa un vehículo y un conductor libres en la ciudad de origen, con 8 h de descanso para el conductor; las motos no hacen rutas de más de 200 km y las rutas largas casi siempre van en camión |
+| Combustible | según el tipo de vehículo (de 3,5 L cada 100 km la moto a 32 L el camión grande) y lo cargado que va |
+| Retrasos | dependen del tráfico de cada ciudad, las lluvias (el Caribe en septiembre a noviembre), diciembre, la hora pico, el largo de la ruta, los conductores con menos de 6 meses y los vehículos viejos |
+| Clientes | 150 empresas por ciudad que piden seguido, unas pocas concentran muchos pedidos, y 12.000 personas |
+| Mantenimiento | un camión grande cuesta más de mantener que una moto, y el costo sube con los años del vehículo |
+
+Con esto el 88% de las entregas llega a tiempo, pero Bogotá queda en 85%, la costa llega a bajar a 81% en la temporada de lluvias
+y los conductores nuevos llegan a tiempo 82% contra 89% del resto. Todo el detalle está en el notebook del Avance 1.
 
 ## 4. Avance 2: análisis SQL y optimización
 
@@ -120,8 +138,8 @@ Elegí las queries 1, 2 y 3 (básicas), 4, 5 y 7 (intermedias) y 9 y 10 (complej
 Para cada una escribí qué problema de negocio responde y cómo interpreto el resultado. El detalle está en `Manual_Consultas_SQL.pdf`.
 
 **Lo más importante que encontré:** la Query 9 original une viajes y mantenimientos al mismo tiempo, entonces cada viaje
-se repite una vez por cada mantenimiento del vehículo (es un *fan-out*). Por eso infla los kilómetros unas 33 veces y los costos más de 600 veces.
-Escribí una versión corregida (9b): el costo total cierra exacto con la base y los kilómetros también, salvo los de 22 vehículos que nunca tuvieron mantenimiento (no tienen costo para dividir). Además es unas 150 veces más rápida.
+se repite una vez por cada mantenimiento del vehículo (es un *fan-out*). Por eso infla los kilómetros unas 36 veces y los costos más de 700 veces.
+Escribí una versión corregida (9b): el costo total cierra exacto con la base y los kilómetros también, salvo los de 3 vehículos que nunca tuvieron mantenimiento (no tienen costo para dividir). Además es unas 150 veces más rápida.
 
 **Índices (`03_optimization_indexes.sql`):** creé 5:
 - `deliveries(trip_id)`
@@ -134,8 +152,8 @@ Para medir usé `EXPLAIN ANALYZE` y me quedé con la mediana de 6 corridas:
 
 | | Sin índices | Con índices | Mejora |
 |---|---|---|---|
-| Total de las 8 queries | 5.159 ms | 1.319 ms | **74,4%** |
-| Con el ajuste para SSD (`random_page_cost = 1.1`) | | 1.171 ms | **77,3%** |
+| Total de las 8 queries | 5.401 ms | 1.372 ms | **74,6%** |
+| Con el ajuste para SSD (`random_page_cost = 1.1`) | | 1.246 ms | **76,9%** |
 
 Las queries 5 y 7 no mejoran, y tiene sentido: las dos leen los 100.000 viajes completos, y para eso lo más rápido es leer la tabla entera.
 Un índice ayuda cuando se necesita una parte chica de la tabla.
@@ -158,12 +176,12 @@ Si corro dos veces el mismo día no se duplican datos.
 
 | Lo que verifiqué | Resultado |
 |---|---|
-| Filas cargadas | 399.994 (todas las entregas completadas) |
+| Filas cargadas | 399.996 (todas las entregas completadas) |
 | Hechos sin su dimensión | 0 |
 | Peso total y % a tiempo contra PostgreSQL | iguales |
 | Volver a cargar el mismo día | no duplica |
 | Cambiar el teléfono de un conductor | se crea una versión nueva en `dim_driver` y la anterior queda cerrada |
-| Carga inicial completa | 66 segundos |
+| Carga inicial completa | 74 segundos |
 
 Las capturas de las tablas en Snowflake están en el notebook del Avance 3, en `3. Documentación/img/` y al final de este documento.
 
@@ -200,7 +218,7 @@ Para eso dejé las Lambda fuera de la VPC y el ETL corre en una EC2 chica.
 Para mostrar los resultados armé un tablero con Streamlit y Plotly, publicado en Streamlit Community Cloud:
 **https://fleetlogix-tomasbabot.streamlit.app**. No lee la base operativa: **lee el Data Warehouse de Snowflake en vivo**.
 Corre dos consultas sobre el modelo estrella (`dashboard/consultas.py`): resume `fact_deliveries` por día, ciudad,
-tipo de vehículo y turno (41.985 filas) y calcula los totales de cada conductor.
+tipo de vehículo, turno y ciudad de origen (unas 90.000 filas) y calcula los totales de cada conductor.
 
 - **Seguridad:** el tablero no usa mi usuario. Creé uno de solo lectura (`usuario_lectura_snowflake.sql`) que solo puede
   hacer SELECT en `FLEETLOGIX_DW.ANALYTICS` y entra con su propio par de llaves, sin contraseña. La llave privada está en
@@ -220,10 +238,15 @@ Páginas:
 
 - **Resumen:** 5 indicadores con su evolución y la variación contra el mismo período del año anterior, una lectura automática
   según los filtros, entregas mensuales 2026 contra 2025, ingreso y costo, y margen por ciudad.
-- **Ciudades:** mapa con el volumen de cada ciudad, entregas, margen y una tabla de detalle.
-- **Flota:** margen, entregas, consumo y carga por tipo de vehículo. Ahí explico por qué la moto da pérdida.
-- **Puntualidad:** mapa de calor por día y turno, puntualidad por turno y minutos por entrega en cada ciudad.
-- **Conductores:** puntualidad contra cantidad de entregas de cada conductor y un ranking que se puede ordenar.
+- **Ciudades y rutas:** mapa de Colombia con los corredores entre ciudades. El grosor de cada arco es la cantidad de entregas y el
+  color es la puntualidad o el margen (se elige arriba del mapa). También muestra entregas y margen por ciudad y una tabla de detalle.
+
+  ![Mapa de rutas](3.%20Documentación/img/dashboard_mapa.png)
+
+- **Flota:** margen, entregas, consumo y carga por tipo de vehículo, y un mapa de calor del margen por tipo de vehículo y largo
+  de la ruta. Ahí se ve que la van pierde plata en las rutas largas.
+- **Puntualidad:** mapa de calor por ciudad y mes (se ven las lluvias del Caribe y diciembre), por día y turno, y minutos por entrega en cada ciudad.
+- **Conductores:** puntualidad contra cantidad de entregas de cada conductor, el efecto de los conductores nuevos y un ranking que se puede ordenar.
 - **Explorador:** con PyGWalker cualquiera puede armar sus propios gráficos arrastrando columnas, parecido a Tableau.
 - **Modelo de datos:** de dónde salen los datos y el modelo estrella.
 
@@ -237,9 +260,10 @@ Dejé afuera el primer día y los dos últimos de los datos porque tienen viajes
 - **Elegí estrella y no copo de nieve** porque los analistas necesitan menos JOIN y Snowflake responde más rápido.
 - **DynamoDB para el tiempo real y RDS para lo transaccional:** DynamoDB responde en milisegundos buscando por clave y se paga por uso.
   RDS mantiene la integridad relacional del modelo original.
-- **Datos sintéticos:** el script base calcula el combustible solo con la distancia, así que una moto "gasta" lo mismo que un camión.
-  Por eso la moto aparece con pérdida en el análisis de rentabilidad. El tipo de cliente (Individual, Empresa, Gobierno) no existe
-  en la base de origen y lo asigné de forma sintética.
+- **Datos sintéticos:** los patrones que encuentra el análisis (estacionalidad, ciudades, conductores) los puse yo en el generador,
+  así que sirven para mostrar las herramientas pero no son datos reales de una empresa. Los precios del combustible, los peajes y las
+  tarifas del ETL son supuestos razonables para Colombia. El tipo de cliente (Individual, Empresa, Gobierno) no existe en la base de
+  origen y lo asigné de forma sintética.
 - **Precios de AWS:** usé los precios de lista de us-east-1 y son aproximados. Antes de implementar habría que confirmarlos con AWS Pricing Calculator.
 
 ## 9. Herramientas

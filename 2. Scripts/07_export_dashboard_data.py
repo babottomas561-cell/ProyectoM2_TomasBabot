@@ -2,7 +2,7 @@
 FleetLogix - Exporta los datos del Data Warehouse (Snowflake) para el dashboard de Streamlit.
 
 Saca dos tablas resumidas del modelo estrella y las guarda en dashboard/data/:
-  - entregas_diarias.parquet: una fila por día, ciudad destino, tipo de vehículo y turno
+  - entregas_diarias.parquet: una fila por día, ciudad de origen, ciudad destino, tipo de vehículo y turno
   - conductores.parquet:      una fila por conductor (versión actual de dim_driver)
 
 El tablero lee Snowflake en vivo si tiene credenciales; si no, usa esta copia

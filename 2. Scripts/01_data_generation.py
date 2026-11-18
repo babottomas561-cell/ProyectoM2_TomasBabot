@@ -262,109 +262,195 @@ class DataGenerator:
         key = tuple(sorted([origin, destination]))
         return distances.get(key, 500)
     
+    # ------------------------------------------------------------------
+    # MEJORA: patrones de negocio. El script base reparte todo al azar y en forma pareja
+    # (mismo volumen todos los días, 90% a tiempo en todas partes), y así el análisis no
+    # encuentra nada. Estos supuestos imitan una operación real en Colombia.
+    # ------------------------------------------------------------------
+    # Peso de cada ciudad como origen y como destino (Bogotá es el mayor mercado)
+    PESO_CIUDAD = {'Bogotá': 0.30, 'Medellín': 0.22, 'Cali': 0.18, 'Barranquilla': 0.16, 'Cartagena': 0.14}
+    # Estacionalidad: pico en Navidad y en noviembre (Black Friday), baja en enero
+    PESO_MES = {1: 0.80, 2: 0.88, 3: 0.95, 4: 0.97, 5: 1.00, 6: 1.04,
+                7: 1.03, 8: 0.98, 9: 1.00, 10: 1.05, 11: 1.15, 12: 1.30}
+    # Día de la semana (lunes = 0): el lunes sale lo acumulado del fin de semana; el domingo casi no se trabaja
+    PESO_DIA_SEMANA = [1.10, 1.00, 1.00, 1.00, 1.05, 0.70, 0.30]
+    CRECIMIENTO_ANUAL = 0.12                     # la empresa crece 12% por año
+    FERIADOS = {(1, 1), (5, 1), (7, 20), (8, 7), (12, 8), (12, 25)}
+    # Litros cada 100 km (vacío) según el tipo de vehículo. El script base usaba 8-15 L para todos,
+    # y por eso una moto gastaba lo mismo que un camión.
+    CONSUMO_100KM = {'Camión Grande': 32.0, 'Camión Mediano': 22.0, 'Van': 12.0, 'Motocicleta': 3.5}
+    KM_MAXIMO_MOTO = 200                         # la moto es para trayectos cortos (Barranquilla - Cartagena)
+    KM_LARGO = 800                               # rutas a la costa: se prefieren camiones
+    DESCANSO_CONDUCTOR_H = 8                     # horas de descanso entre dos viajes del mismo conductor
+    ALISTAMIENTO_VEHICULO_H = 2                  # horas para descargar y cargar el vehículo entre viajes
+
+    def _peso_dia(self, dia, avance):
+        """Volumen relativo de un día: mes x día de la semana x crecimiento (avance va de 0 a 1 en los 2 años)."""
+        peso = self.PESO_MES[dia.month] * self.PESO_DIA_SEMANA[dia.weekday()]
+        peso *= (1 + self.CRECIMIENTO_ANUAL) ** (2 * avance)
+        if (dia.month, dia.day) in self.FERIADOS:
+            peso *= 0.4
+        return peso
+
     def generate_trips(self, count=100000):
         """Generar 100000 viajes en 2 años de operación"""
         logging.info(f"Generando {count} viajes...")
-        
-        # Obtener IDs válidos
-        # MEJORA: traemos también la fecha de compra / contratación, ordenadas, para que
-        # un viaje solo use vehículos ya comprados y conductores ya contratados ese día.
-        self.cursor.execute("""
-            SELECT vehicle_id, capacity_kg, acquisition_date
-            FROM vehicles WHERE status = 'active' ORDER BY acquisition_date
-        """)
-        vehicles = self.cursor.fetchall()
-        vehicle_dates = [v[2] for v in vehicles]
 
+        # Vehículos y conductores activos, con la fecha desde la que se pueden usar
+        self.cursor.execute("""
+            SELECT vehicle_id, vehicle_type, capacity_kg, acquisition_date
+            FROM vehicles WHERE status = 'active' ORDER BY vehicle_id
+        """)
+        veh = self.cursor.fetchall()
         self.cursor.execute("""
             SELECT driver_id, hire_date
-            FROM drivers WHERE status = 'active' ORDER BY hire_date
+            FROM drivers WHERE status = 'active' ORDER BY driver_id
         """)
-        driver_rows = self.cursor.fetchall()
-        drivers = [d[0] for d in driver_rows]
-        driver_dates = [d[1] for d in driver_rows]
-        
-        self.cursor.execute("SELECT route_id, distance_km, estimated_duration_hours FROM routes")
+        cond = self.cursor.fetchall()
+        self.cursor.execute("""
+            SELECT route_id, origin_city, destination_city, distance_km, estimated_duration_hours
+            FROM routes ORDER BY route_id
+        """)
         routes = self.cursor.fetchall()
-        
-        # Fecha inicial: 2 años atrás
-        start_date = datetime.now() - timedelta(days=730)
-        
+
+        # 2 años completos: desde hace 730 días a las 00:00 hasta ayer
+        hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        inicio = hoy - timedelta(days=730)
+
+        def horas(fecha):
+            """Horas desde el inicio (para comparar fechas rápido con NumPy)."""
+            return (datetime.combine(fecha, datetime.min.time()) - inicio).total_seconds() / 3600
+
+        ciudad_idx = {c: i for i, c in enumerate(self.cities)}
+        peso_ciudad = np.array([self.PESO_CIUDAD[c] for c in self.cities])
+
+        v_id = np.array([v[0] for v in veh])
+        v_tipo = np.array([v[1] for v in veh])
+        v_cap = np.array([float(v[2]) for v in veh])
+        v_desde = np.array([horas(v[3]) for v in veh])
+        v_moto = v_tipo == 'Motocicleta'
+        v_van = v_tipo == 'Van'
+        v_libre = np.full(len(veh), -1e9)                                    # hora en que queda libre
+        v_lugar = np.random.choice(len(self.cities), len(veh), p=peso_ciudad)  # ciudad donde está
+
+        c_id = np.array([c[0] for c in cond])
+        c_desde = np.array([horas(c[1]) for c in cond])
+        c_libre = np.full(len(cond), -1e9)
+        c_lugar = np.random.choice(len(self.cities), len(cond), p=peso_ciudad)
+
+        # 1) Cuántos viajes sale cada día (los 100.000 repartidos según el peso de cada día)
+        dias = [inicio + timedelta(days=i) for i in range(730)]
+        pesos = np.array([self._peso_dia(d, i / 730) for i, d in enumerate(dias)])
+        cuota = pesos / pesos.sum() * count
+        por_dia = np.floor(cuota).astype(int)
+        faltan = count - por_dia.sum()
+        por_dia[np.argsort(-(cuota - por_dia))[:faltan]] += 1               # resto mayor: suma exacta
+
+        # 2) Hora de salida de cada viaje (misma distribución horaria del script base)
+        salidas = []
+        for dia, n in zip(dias, por_dia):
+            horas_dia = np.random.choice(range(24), size=n, p=self._get_hourly_distribution())
+            minutos = np.random.randint(0, 60, size=n)
+            salidas.extend(((dia - inicio).days * 24 + horas_dia + minutos / 60).tolist())
+        salidas.sort()
+
+        # 3) Ruta: origen y destino según la demanda de cada ciudad. Con p(origen, destino)
+        #    proporcional a peso(origen) x peso(destino), lo que entra a cada ciudad es igual a
+        #    lo que sale, y la flota no se acumula en un solo lugar.
+        pares = [(o, d) for o in self.cities for d in self.cities if o != d]
+        p_par = np.array([self.PESO_CIUDAD[o] * self.PESO_CIUDAD[d] for o, d in pares])
+        p_par /= p_par.sum()
+        rutas_del_par = {par: [r for r in routes if (r[1], r[2]) == par] for par in pares}
+
         trips = []
-        current_date = start_date
-        
-        # Distribuir viajes a lo largo de 2 años
-        for i in tqdm(range(count), desc="Generando trips"):
-            # Cuántos vehículos/conductores ya existían en esta fecha (las listas están ordenadas)
-            n_vehicles = max(1, bisect.bisect_right(vehicle_dates, current_date.date()))
-            n_drivers = max(1, bisect.bisect_right(driver_dates, current_date.date()))
-            vehicle_id, capacity, _ = vehicles[random.randrange(n_vehicles)]
-            capacity = float(capacity)
-            driver_id = drivers[random.randrange(n_drivers)]
-            route_id, distance, est_duration = random.choice(routes)
-            
-            distance = float(distance)
-            est_duration = float(est_duration)
-            
-            # Horario de salida (más viajes en horario laboral)
-            hour = np.random.choice(
-                range(24), 
-                p=self._get_hourly_distribution()
-            )
-            departure = current_date.replace(hour=hour, minute=random.randint(0, 59))
-            
-            # Duración real con variación
+        reubicados = 0       # viajes en los que hubo que traer el vehículo o el conductor de otra ciudad
+        for salida in tqdm(salidas, desc="Generando trips"):
+            origen, destino = pares[np.random.choice(len(pares), p=p_par)]
+            route_id, _, _, distance, est_duration = random.choice(rutas_del_par[(origen, destino)])
+            distance, est_duration = float(distance), float(est_duration)
+            o = ciudad_idx[origen]
+
+            # Vehículo: ya comprado, libre, en la ciudad de origen (las motos solo en rutas cortas)
+            apto = v_desde <= salida
+            if distance > self.KM_MAXIMO_MOTO:
+                apto = apto & ~v_moto
+            if distance > self.KM_LARGO and random.random() < 0.75:
+                apto = apto & ~v_van          # 3 de cada 4 viajes largos se reservan para camiones
+            vi, salida, movido = self._elegir(apto, v_libre, v_lugar, o, salida)
+            # Conductor: ya contratado, descansado y en la ciudad de origen
+            ci, salida, movido_c = self._elegir(c_desde <= salida, c_libre, c_lugar, o, salida)
+            reubicados += movido or movido_c
+
+            # Duración real con variación (como el script base)
             actual_duration = est_duration * random.uniform(0.8, 1.3)
-            arrival = departure + timedelta(hours=actual_duration)
-            
-            # Consumo de combustible basado en distancia y tipo de vehículo
-            fuel_consumed = distance * random.uniform(0.08, 0.15)  # 8-15L/100km
-            
-            # Peso total (40-90% de capacidad)
-            total_weight = capacity * random.uniform(0.4, 0.9)
-            
-            # Estado (95% completados)
-            if arrival < datetime.now():
-                status = 'completed'
-            else:
-                status = 'in_progress'
-            
+            llegada = salida + actual_duration
+            v_libre[vi] = llegada + self.ALISTAMIENTO_VEHICULO_H
+            c_libre[ci] = llegada + self.DESCANSO_CONDUCTOR_H
+            v_lugar[vi] = c_lugar[ci] = ciudad_idx[destino]
+
+            departure = inicio + timedelta(hours=salida)
+            arrival = inicio + timedelta(hours=llegada)
+
+            # Carga: más llenos en noviembre y diciembre, más vacíos en enero
+            minimo, maximo = {11: (0.5, 0.95), 12: (0.55, 0.95), 1: (0.35, 0.8)}.get(departure.month, (0.4, 0.9))
+            carga = random.uniform(minimo, maximo)
+            total_weight = v_cap[vi] * carga
+
+            # Combustible: según el tipo de vehículo y lo cargado que va (+5% si tiene más de 4 años)
+            tipo = v_tipo[vi]
+            fuel_consumed = distance * self.CONSUMO_100KM[tipo] / 100 * (0.85 + 0.3 * carga) * random.uniform(0.92, 1.08)
+            if salida - v_desde[vi] > 4 * 365 * 24:
+                fuel_consumed *= 1.05
+
+            status = 'completed' if arrival < datetime.now() else 'in_progress'
             trips.append((
-                vehicle_id,
-                driver_id,
+                int(v_id[vi]),
+                int(c_id[ci]),
                 route_id,
-                departure,
-                arrival if status == 'completed' else None,
-                round(fuel_consumed, 2),
-                round(total_weight, 2),
+                departure.replace(second=0, microsecond=0),
+                arrival.replace(second=0, microsecond=0) if status == 'completed' else None,
+                round(float(fuel_consumed), 2),   # float(): psycopg2 no entiende np.float64
+                round(float(total_weight), 2),
                 status
             ))
-            
-            # Avanzar fecha (distribución uniforme)
-            # CORRECCIÓN: el original usaba int(10.51) = 10 minutos por viaje, así los
-            # 100.000 viajes cubrían 694 días y terminaban más de un mes antes de hoy.
-            # Con el paso exacto los viajes llegan hasta ayer (los últimos quedan en curso).
-            current_date += timedelta(minutes=1440 * (730 - 1) / count)
-        
+
+        logging.info(f"  Viajes con vehículo o conductor traído de otra ciudad: {reubicados:,}")
+
         # Insertar en batches
         query = """
             INSERT INTO trips (vehicle_id, driver_id, route_id, departure_datetime,
                              arrival_datetime, fuel_consumed_liters, total_weight_kg, status)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        
+
         batch_size = 1000
         for i in range(0, len(trips), batch_size):
             batch = trips[i:i+batch_size]
             execute_batch(self.cursor, query, batch, page_size=100)
             self.connection.commit()
-            
+
             if i % 10000 == 0:
                 logging.info(f"  Progreso: {i}/{count} trips insertados")
-        
+
         self.counters['trips'] = count
         logging.info(f" {count} viajes insertados")
-    
+
+    @staticmethod
+    def _elegir(apto, libre, lugar, ciudad, salida):
+        """Elige al azar un vehículo o conductor apto, libre a la hora de salida y que esté en la ciudad.
+        Si no hay ninguno en esa ciudad, usa uno libre de otra (se reubica). Si no hay ninguno libre,
+        el viaje espera al primero que se libere. Devuelve (índice, hora de salida, si se reubicó)."""
+        libres = apto & (libre <= salida)
+        aca = np.flatnonzero(libres & (lugar == ciudad))
+        if len(aca):
+            return int(np.random.choice(aca)), salida, False
+        otros = np.flatnonzero(libres)
+        if len(otros):
+            return int(np.random.choice(otros)), salida, True
+        candidatos = np.flatnonzero(apto)
+        i = int(candidatos[np.argmin(libre[candidatos])])
+        return i, float(libre[i]), True
+
     def _get_hourly_distribution(self):
         """Distribución de probabilidad por hora del día"""
         # Más viajes en horario laboral
@@ -374,25 +460,77 @@ class DataGenerator:
         probs[14:18] = 0.07  # 2pm-6pm pico tarde
         return probs / probs.sum()
     
+    # MEJORA: la probabilidad de llegar tarde depende de causas reales (en el script base era 10% fijo).
+    # Se suman "puntos de riesgo" en escala logit y se convierten en probabilidad.
+    RIESGO_CIUDAD = {'Bogotá': 0.45, 'Cali': 0.15, 'Medellín': 0.0, 'Barranquilla': -0.1, 'Cartagena': 0.0}
+    CIUDADES_CARIBE = ('Barranquilla', 'Cartagena')
+
+    def _prob_retraso(self, ciudad, cuando, km, dias_conductor, anios_vehiculo, habilidad):
+        z = -3.0
+        z += self.RIESGO_CIUDAD[ciudad]                               # tráfico de la ciudad
+        if ciudad in self.CIUDADES_CARIBE and cuando.month in (9, 10, 11):
+            z += 0.9                                                  # temporada de lluvias en el Caribe
+        elif ciudad not in self.CIUDADES_CARIBE and cuando.month in (4, 5, 10, 11):
+            z += 0.35                                                 # lluvias en la zona andina
+        if cuando.month == 12:
+            z += 0.45                                                 # pico de Navidad
+        if ciudad not in self.CIUDADES_CARIBE and (6 <= cuando.hour < 9 or 17 <= cuando.hour < 20):
+            z += 0.5                                                  # hora pico en las ciudades grandes
+        z += 0.3 * km / 500                                           # rutas largas acumulan imprevistos
+        if dias_conductor < 180:
+            z += 0.6                                                  # conductor con menos de 6 meses
+        if anios_vehiculo >= 4:
+            z += 0.3                                                  # vehículo viejo
+        z += habilidad                                                # cada conductor es distinto
+        return 1 / (1 + np.exp(-z))
+
+    def _clientes(self):
+        """Cartera de clientes por ciudad: 150 empresas que piden seguido y 12.000 personas.
+        En el script base cada entrega tenía un cliente nuevo inventado, y nadie repetía."""
+        rubros = ['Distribuidora', 'Ferretería', 'Droguería', 'Almacenes', 'Comercializadora',
+                  'Supermercado', 'Importadora', 'Textiles', 'Repuestos', 'Muebles']
+        formas = ['S.A.S.', 'S.A.S.', 'S.A.S.', 'Ltda.', 'S.A.']
+        cartera = {}
+        for ciudad in self.cities:
+            empresas = [(f"{random.choice(rubros)} {fake.last_name()} {random.choice(formas)}",
+                         f"{fake.street_address()}, {ciudad}") for _ in range(150)]
+            personas = [(fake.name(), f"{fake.street_address()}, {ciudad}") for _ in range(12000)]
+            # Pocas empresas concentran muchos pedidos (ley de potencias, como en la realidad)
+            peso = 1 / np.arange(1, 151) ** 0.8
+            cartera[ciudad] = (empresas, peso / peso.sum(), personas)
+        return cartera
+
     def generate_deliveries(self, count=400000):
         """Generar 400000 entregas (promedio 4 por viaje)"""
         logging.info(f"Generando {count} entregas...")
-        
-        # Obtener todos los trips con su información
-        # Para cada viaje traemos 5 columnas en este orden (el for de abajo las usa así).
-        # La ciudad de destino no está en trips sino en routes: por eso el JOIN por route_id.
+
+        # Para cada viaje: horarios, peso, ciudad y distancia de la ruta, y la fecha de
+        # contratación del conductor y de compra del vehículo (para el riesgo de retraso)
         self.cursor.execute("""
             SELECT t.trip_id,
                    t.departure_datetime,
                    t.arrival_datetime,
                    t.total_weight_kg,
-                   r.destination_city
+                   r.destination_city,
+                   r.distance_km,
+                   t.driver_id,
+                   d.hire_date,
+                   v.acquisition_date
             FROM trips t
-            JOIN routes r ON t.route_id = r.route_id
+            JOIN routes r   ON t.route_id = r.route_id
+            JOIN drivers d  ON t.driver_id = d.driver_id
+            JOIN vehicles v ON t.vehicle_id = v.vehicle_id
             ORDER BY t.trip_id
         """)
         trips_data = self.cursor.fetchall()
-        
+
+        # Habilidad de cada conductor (no se guarda en la base: es la causa "oculta" que el
+        # análisis tiene que descubrir). La mayoría es normal; 1 de cada 20 es muy impuntual.
+        rng = np.random.default_rng(7)
+        ids = sorted({t[6] for t in trips_data})
+        habilidad = dict(zip(ids, rng.normal(0, 0.4, len(ids)) + np.where(rng.random(len(ids)) < 0.05, 0.8, 0)))
+        cartera = self._clientes()
+
         deliveries = []
         delivery_counter = 0
 
@@ -411,39 +549,43 @@ class DataGenerator:
             if entregas_por_viaje[i] < 6:
                 entregas_por_viaje[i] += 1
 
-        # Distribuir entregas entre los viajes
-        for n_trip, (trip_id, departure, arrival, total_weight, city) in enumerate(
-                tqdm(trips_data, desc="Generando deliveries")):
-            # Número de entregas para este viaje (ya sorteado y ajustado arriba)
+        for n_trip, (trip_id, departure, arrival, total_weight, city, km, driver_id,
+                     hire_date, acquisition_date) in enumerate(tqdm(trips_data, desc="Generando deliveries")):
             num_deliveries = int(entregas_por_viaje[n_trip])
-            
-            # Peso por entrega
             weights = self._distribute_weight(float(total_weight), num_deliveries)
-            #weights = self._distribute_weight(total_weight, num_deliveries)
-            
+
             # Tiempo entre entregas
             if arrival:
                 delivery_duration = (arrival - departure).total_seconds() / 3600
                 time_per_delivery = delivery_duration / num_deliveries
             else:
                 time_per_delivery = 0.5  # 30 minutos promedio
-            
+
+            dias_conductor = (departure.date() - hire_date).days
+            anios_vehiculo = (departure.date() - acquisition_date).days / 365
+            empresas, peso_empresas, personas = cartera[city]
+
             for i in range(num_deliveries):
                 tracking_number = f"FL{datetime.now().year}{str(delivery_counter+1).zfill(8)}"
-                customer_name = fake.name()
-                delivery_address = f"{fake.street_address()}, {city}"
+                # 30% de las entregas son a empresas de la cartera; el resto, a personas
+                if random.random() < 0.30:
+                    customer_name, delivery_address = empresas[np.random.choice(150, p=peso_empresas)]
+                else:
+                    customer_name, delivery_address = random.choice(personas)
                 # CORRECCIÓN: float() porque con NumPy 2 psycopg2 manda "np.float64(...)" y falla
                 package_weight = float(weights[i])
-                
+
                 # Horario programado y real
                 scheduled = departure + timedelta(hours=time_per_delivery * (i + 0.5))
-                
+
                 if arrival:
-                    # 90% entregados a tiempo, 10% con retraso
-                    if random.random() < 0.9:
+                    p_tarde = self._prob_retraso(city, scheduled, float(km), dias_conductor,
+                                                 anios_vehiculo, habilidad[driver_id])
+                    if random.random() >= p_tarde:
                         delivered = scheduled + timedelta(minutes=random.randint(-30, 30))
                     else:
-                        delivered = scheduled + timedelta(minutes=random.randint(60, 180))
+                        # Retraso: pasa la tolerancia de 30 min; la mayoría por poco, algunos por horas
+                        delivered = scheduled + timedelta(minutes=int(31 + min(np.random.exponential(55), 300)))
 
                     # MEJORA: una entrega no puede ocurrir antes de que salga el camión
                     delivered = max(delivered, departure + timedelta(minutes=5))
@@ -454,7 +596,7 @@ class DataGenerator:
                     delivered = None
                     delivery_status = 'pending'
                     signature = False
-                
+
                 deliveries.append((
                     trip_id,
                     tracking_number,
@@ -466,15 +608,15 @@ class DataGenerator:
                     delivery_status,
                     signature
                 ))
-                
+
                 delivery_counter += 1
-                
+
                 if delivery_counter >= count:  # CORRECCIÓN: con > salían 400.001
                     break
-            
+
             if delivery_counter >= count:
                 break
-        
+
         # Insertar en batches
         query = """
             INSERT INTO deliveries (trip_id, tracking_number, customer_name,
@@ -482,19 +624,19 @@ class DataGenerator:
                                   delivered_datetime, delivery_status, recipient_signature)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        
+
         batch_size = 1000
         for i in range(0, len(deliveries), batch_size):
             batch = deliveries[i:i+batch_size]
             execute_batch(self.cursor, query, batch, page_size=100)
             self.connection.commit()
-            
+
             if i % 50000 == 0:
                 logging.info(f"  Progreso: {i}/{len(deliveries)} deliveries insertados")
-        
+
         self.counters['deliveries'] = len(deliveries)
         logging.info(f" {len(deliveries)} entregas insertadas")
-    
+
     def _distribute_weight(self, total_weight, num_packages):
         """Distribuir peso total entre paquetes de manera realista"""
         # Generar pesos aleatorios
@@ -515,12 +657,13 @@ class DataGenerator:
         self.cursor.execute("""
             SELECT v.vehicle_id,
                    v.vehicle_type,
+                   v.acquisition_date,
                    COUNT(t.trip_id)           AS trip_count,
                    MIN(t.departure_datetime)  AS first_trip,
                    MAX(t.departure_datetime)  AS last_trip
             FROM vehicles v
             JOIN trips t ON t.vehicle_id = v.vehicle_id
-            GROUP BY v.vehicle_id, v.vehicle_type
+            GROUP BY v.vehicle_id, v.vehicle_type, v.acquisition_date
             ORDER BY v.vehicle_id
         """)
         vehicle_stats = self.cursor.fetchall()
@@ -536,7 +679,10 @@ class DataGenerator:
         
         maintenance_records = []
         
-        for vehicle_id, vehicle_type, trip_count, first_trip, last_trip in vehicle_stats:
+        # MEJORA: un camión grande cuesta más de mantener que una moto, y un vehículo viejo más que uno nuevo
+        factor_tipo = {'Camión Grande': 1.6, 'Camión Mediano': 1.3, 'Van': 1.0, 'Motocicleta': 0.35}
+
+        for vehicle_id, vehicle_type, acquisition_date, trip_count, first_trip, last_trip in vehicle_stats:
             # Número de mantenimientos basado en viajes (cada ~20 viajes)
             # MEJORA: redondeo hacia arriba. Con // (hacia abajo) cada vehículo "pierde"
             # medio mantenimiento en promedio y el total queda por debajo de 5.000.
@@ -555,7 +701,8 @@ class DataGenerator:
                     maint_type, base_cost, days_next = random.choice(maintenance_types)
                     
                     # Costo con variación
-                    cost = base_cost * random.uniform(0.8, 1.2)
+                    cost = base_cost * random.uniform(0.8, 1.2) * factor_tipo[vehicle_type]
+                    cost *= 1 + 0.08 * (maintenance_date - acquisition_date).days / 365
                     
                     # Descripción
                     description = f"{maint_type} programado para {maintenance_date.strftime('%Y-%m-%d')}"
@@ -635,6 +782,26 @@ class DataGenerator:
                 SELECT COUNT(*) FROM trips t
                 JOIN vehicles v ON t.vehicle_id = v.vehicle_id
                 WHERE t.departure_datetime::date < v.acquisition_date
+            """,
+            "Horarios - Conductores con viajes superpuestos o sin descanso": """
+                SELECT COUNT(*) FROM (
+                    SELECT departure_datetime,
+                           LAG(arrival_datetime) OVER (PARTITION BY driver_id ORDER BY departure_datetime) AS llegada_anterior
+                    FROM trips) x
+                WHERE departure_datetime < llegada_anterior + INTERVAL '8 hours'
+            """,
+            "Horarios - Vehículos en dos viajes a la vez": """
+                SELECT COUNT(*) FROM (
+                    SELECT departure_datetime,
+                           LAG(arrival_datetime) OVER (PARTITION BY vehicle_id ORDER BY departure_datetime) AS llegada_anterior
+                    FROM trips) x
+                WHERE departure_datetime < llegada_anterior
+            """,
+            "Coherencia - Motos en rutas de más de 200 km": """
+                SELECT COUNT(*) FROM trips t
+                JOIN vehicles v ON t.vehicle_id = v.vehicle_id
+                JOIN routes r ON t.route_id = r.route_id
+                WHERE v.vehicle_type = 'Motocicleta' AND r.distance_km > 200
             """,
             "Coherencia - Entregas antes de la salida del viaje": """
                 SELECT COUNT(*) FROM deliveries d

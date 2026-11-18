@@ -1,59 +1,63 @@
-2026-11-17 10:52:38,821 - INFO -  Conexión exitosa a PostgreSQL
-2026-11-17 10:52:38,822 - INFO - Generando 200 vehículos...
-2026-11-17 10:52:38,841 - INFO -  200 vehículos insertados
-2026-11-17 10:52:38,841 - INFO - Generando 400 conductores...
-2026-11-17 10:52:38,893 - INFO -  400 conductores insertados
-2026-11-17 10:52:38,893 - INFO - Generando 50 rutas...
-2026-11-17 10:52:38,896 - INFO -  50 rutas insertadas
-2026-11-17 10:52:38,896 - INFO - Generando 100000 viajes...
-2026-11-17 10:52:40,754 - INFO -   Progreso: 0/100000 trips insertados
-2026-11-17 10:52:41,272 - INFO -   Progreso: 10000/100000 trips insertados
-2026-11-17 10:52:41,878 - INFO -   Progreso: 20000/100000 trips insertados
-2026-11-17 10:52:42,474 - INFO -   Progreso: 30000/100000 trips insertados
-2026-11-17 10:52:43,106 - INFO -   Progreso: 40000/100000 trips insertados
-2026-11-17 10:52:43,723 - INFO -   Progreso: 50000/100000 trips insertados
-2026-11-17 10:52:44,369 - INFO -   Progreso: 60000/100000 trips insertados
-2026-11-17 10:52:44,961 - INFO -   Progreso: 70000/100000 trips insertados
-2026-11-17 10:52:45,568 - INFO -   Progreso: 80000/100000 trips insertados
-2026-11-17 10:52:46,226 - INFO -   Progreso: 90000/100000 trips insertados
-2026-11-17 10:52:46,751 - INFO -  100000 viajes insertados
-2026-11-17 10:52:46,760 - INFO - Generando 400000 entregas...
-2026-11-17 10:53:14,078 - INFO -   Progreso: 0/400000 deliveries insertados
-2026-11-17 10:53:16,982 - INFO -   Progreso: 50000/400000 deliveries insertados
-2026-11-17 10:53:19,963 - INFO -   Progreso: 100000/400000 deliveries insertados
-2026-11-17 10:53:22,847 - INFO -   Progreso: 150000/400000 deliveries insertados
-2026-11-17 10:53:25,783 - INFO -   Progreso: 200000/400000 deliveries insertados
-2026-11-17 10:53:28,701 - INFO -   Progreso: 250000/400000 deliveries insertados
-2026-11-17 10:53:32,128 - INFO -   Progreso: 300000/400000 deliveries insertados
-2026-11-17 10:53:34,379 - INFO -   Progreso: 350000/400000 deliveries insertados
-2026-11-17 10:53:36,459 - INFO -  400000 entregas insertadas
-2026-11-17 10:53:36,534 - INFO - Generando 5000 registros de mantenimiento...
-2026-11-17 10:53:37,023 - INFO -  5000 mantenimientos insertados
-2026-11-17 10:53:37,023 - INFO - 
+2026-11-17 16:04:29,411 - INFO -  Conexión exitosa a PostgreSQL
+2026-11-17 16:04:29,411 - INFO - Generando 200 vehículos...
+2026-11-17 16:04:29,427 - INFO -  200 vehículos insertados
+2026-11-17 16:04:29,427 - INFO - Generando 400 conductores...
+2026-11-17 16:04:29,487 - INFO -  400 conductores insertados
+2026-11-17 16:04:29,487 - INFO - Generando 50 rutas...
+2026-11-17 16:04:29,491 - INFO -  50 rutas insertadas
+2026-11-17 16:04:29,491 - INFO - Generando 100000 viajes...
+2026-11-17 16:04:32,570 - INFO -   Viajes con vehículo o conductor traído de otra ciudad: 10,046
+2026-11-17 16:04:32,641 - INFO -   Progreso: 0/100000 trips insertados
+2026-11-17 16:04:33,095 - INFO -   Progreso: 10000/100000 trips insertados
+2026-11-17 16:04:33,684 - INFO -   Progreso: 20000/100000 trips insertados
+2026-11-17 16:04:34,257 - INFO -   Progreso: 30000/100000 trips insertados
+2026-11-17 16:04:34,851 - INFO -   Progreso: 40000/100000 trips insertados
+2026-11-17 16:04:35,451 - INFO -   Progreso: 50000/100000 trips insertados
+2026-11-17 16:04:36,028 - INFO -   Progreso: 60000/100000 trips insertados
+2026-11-17 16:04:36,536 - INFO -   Progreso: 70000/100000 trips insertados
+2026-11-17 16:04:37,147 - INFO -   Progreso: 80000/100000 trips insertados
+2026-11-17 16:04:37,714 - INFO -   Progreso: 90000/100000 trips insertados
+2026-11-17 16:04:38,092 - INFO -  100000 viajes insertados
+2026-11-17 16:04:38,098 - INFO - Generando 400000 entregas...
+2026-11-17 16:04:45,620 - INFO -   Progreso: 0/400000 deliveries insertados
+2026-11-17 16:04:48,069 - INFO -   Progreso: 50000/400000 deliveries insertados
+2026-11-17 16:04:50,566 - INFO -   Progreso: 100000/400000 deliveries insertados
+2026-11-17 16:04:52,993 - INFO -   Progreso: 150000/400000 deliveries insertados
+2026-11-17 16:04:55,358 - INFO -   Progreso: 200000/400000 deliveries insertados
+2026-11-17 16:04:57,576 - INFO -   Progreso: 250000/400000 deliveries insertados
+2026-11-17 16:04:59,780 - INFO -   Progreso: 300000/400000 deliveries insertados
+2026-11-17 16:05:01,885 - INFO -   Progreso: 350000/400000 deliveries insertados
+2026-11-17 16:05:04,278 - INFO -  400000 entregas insertadas
+2026-11-17 16:05:04,329 - INFO - Generando 5000 registros de mantenimiento...
+2026-11-17 16:05:04,835 - INFO -  5000 mantenimientos insertados
+2026-11-17 16:05:04,835 - INFO - 
  RESUMEN DE GENERACIÓN DE DATOS
-2026-11-17 10:53:37,023 - INFO - ==================================================
-2026-11-17 10:53:37,023 - INFO -   vehicles: 200 registros
-2026-11-17 10:53:37,024 - INFO -   drivers: 400 registros
-2026-11-17 10:53:37,024 - INFO -   routes: 50 registros
-2026-11-17 10:53:37,026 - INFO -   trips: 100,000 registros
-2026-11-17 10:53:37,042 - INFO -   deliveries: 400,000 registros
-2026-11-17 10:53:37,043 - INFO -   maintenance: 5,000 registros
-2026-11-17 10:53:37,043 - INFO - 
+2026-11-17 16:05:04,835 - INFO - ==================================================
+2026-11-17 16:05:04,836 - INFO -   vehicles: 200 registros
+2026-11-17 16:05:04,836 - INFO -   drivers: 400 registros
+2026-11-17 16:05:04,836 - INFO -   routes: 50 registros
+2026-11-17 16:05:04,841 - INFO -   trips: 100,000 registros
+2026-11-17 16:05:04,859 - INFO -   deliveries: 400,000 registros
+2026-11-17 16:05:04,860 - INFO -   maintenance: 5,000 registros
+2026-11-17 16:05:04,860 - INFO - 
   TOTAL: 505,650 registros
-2026-11-17 10:53:37,110 - INFO - 
+2026-11-17 16:05:04,944 - INFO - 
   Entregas por viaje: AVG=4.0, MIN=2, MAX=6
-2026-11-17 10:53:37,110 - INFO - 
+2026-11-17 16:05:04,944 - INFO - 
  VALIDANDO CALIDAD DE DATOS...
-2026-11-17 10:53:37,117 - INFO -    Integridad referencial - Trips sin vehículo válido: OK
-2026-11-17 10:53:37,137 - INFO -    Integridad referencial - Deliveries sin trip válido: OK
-2026-11-17 10:53:37,143 - INFO -    Consistencia temporal - Trips con arrival < departure: OK
-2026-11-17 10:53:37,159 - INFO -    Consistencia de peso - Trips excediendo capacidad: OK
-2026-11-17 10:53:37,160 - INFO -    Entregas sin tracking number: OK
-2026-11-17 10:53:37,160 - INFO -    Integridad referencial - Maintenance sin vehículo válido: OK
-2026-11-17 10:53:37,174 - INFO -    Coherencia - Viajes antes de contratar al conductor: OK
-2026-11-17 10:53:37,188 - INFO -    Coherencia - Viajes antes de comprar el vehículo: OK
-2026-11-17 10:53:37,218 - INFO -    Coherencia - Entregas antes de la salida del viaje: OK
-2026-11-17 10:53:37,219 - INFO - 
+2026-11-17 16:05:04,952 - INFO -    Integridad referencial - Trips sin vehículo válido: OK
+2026-11-17 16:05:04,980 - INFO -    Integridad referencial - Deliveries sin trip válido: OK
+2026-11-17 16:05:04,987 - INFO -    Consistencia temporal - Trips con arrival < departure: OK
+2026-11-17 16:05:05,005 - INFO -    Consistencia de peso - Trips excediendo capacidad: OK
+2026-11-17 16:05:05,006 - INFO -    Entregas sin tracking number: OK
+2026-11-17 16:05:05,007 - INFO -    Integridad referencial - Maintenance sin vehículo válido: OK
+2026-11-17 16:05:05,022 - INFO -    Coherencia - Viajes antes de contratar al conductor: OK
+2026-11-17 16:05:05,037 - INFO -    Coherencia - Viajes antes de comprar el vehículo: OK
+2026-11-17 16:05:05,108 - INFO -    Horarios - Conductores con viajes superpuestos o sin descanso: OK
+2026-11-17 16:05:05,179 - INFO -    Horarios - Vehículos en dos viajes a la vez: OK
+2026-11-17 16:05:05,184 - INFO -    Coherencia - Motos en rutas de más de 200 km: OK
+2026-11-17 16:05:05,227 - INFO -    Coherencia - Entregas antes de la salida del viaje: OK
+2026-11-17 16:05:05,227 - INFO - 
  Resumen guardado en generation_summary.json
-2026-11-17 10:53:37,220 - INFO - 
+2026-11-17 16:05:05,228 - INFO - 
  Conexión cerrada

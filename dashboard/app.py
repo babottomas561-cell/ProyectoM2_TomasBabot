@@ -21,6 +21,8 @@ st.set_page_config(page_title='FleetLogix · Tablero', page_icon='🚚', layout=
 
 CARPETA = Path(__file__).parent
 DATOS = CARPETA / 'data'
+# Subir este número cuando cambian las consultas o los datos: invalida la caché de lecturas anteriores
+VERSION_DATOS = 2
 
 # Colores (los mismos tonos que mi tablero de ventas retail)
 AZUL, AZUL_SUAVE, GRIS = '#2563EB', 'rgba(37, 99, 235, 0.08)', '#9CA3AF'
@@ -32,6 +34,13 @@ DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Doming
 TURNOS = {'Turno 1': 'Turno 1 · 06 a 14 h', 'Turno 2': 'Turno 2 · 14 a 22 h', 'Turno 3': 'Turno 3 · 22 a 06 h'}
 COORDENADAS = {'Bogotá': (4.711, -74.072), 'Medellín': (6.244, -75.581), 'Cali': (3.452, -76.532),
                'Barranquilla': (10.969, -74.781), 'Cartagena': (10.391, -75.479)}
+# Km por carretera entre cada par de ciudades (la misma tabla que usa el generador de datos)
+KM_CORREDOR = {frozenset(par): km for par, km in [
+    (('Bogotá', 'Medellín'), 440), (('Bogotá', 'Cali'), 460), (('Bogotá', 'Barranquilla'), 1000),
+    (('Bogotá', 'Cartagena'), 1050), (('Medellín', 'Cali'), 420), (('Medellín', 'Barranquilla'), 640),
+    (('Medellín', 'Cartagena'), 640), (('Cali', 'Barranquilla'), 1100), (('Cali', 'Cartagena'), 1100),
+    (('Barranquilla', 'Cartagena'), 120)]}
+TRAMOS = ['Corta · 120 km', 'Media · 420 a 640 km', 'Larga · 1.000 km o más']
 
 st.markdown("""
 <style>
@@ -68,7 +77,7 @@ def hay_credenciales():
 
 
 @st.cache_data(ttl='1h', show_spinner='Leyendo el Data Warehouse en Snowflake...')
-def leer_snowflake():
+def leer_snowflake(version=VERSION_DATOS):
     """Lee el Data Warehouse en vivo con un usuario de solo lectura que tiene su propio par de llaves (no mi usuario).
     Guardo el resultado una hora para no prender el warehouse (y gastar créditos) en cada visita.
     Si falla, Streamlit no guarda el error en la caché: la próxima vez lo vuelve a intentar."""
@@ -83,7 +92,7 @@ def leer_snowflake():
 
 
 @st.cache_data
-def leer_copia():
+def leer_copia(version=VERSION_DATOS):
     return pd.read_parquet(DATOS / 'entregas_diarias.parquet'), pd.read_parquet(DATOS / 'conductores.parquet')
 
 
@@ -94,7 +103,7 @@ def cargar_datos():
     fallo_reciente = st.session_state.get('fallo_snowflake', 0) > datetime.now().timestamp() - 600
     if hay_credenciales() and not fallo_reciente:
         try:
-            entregas, conductores, fuente['hora'] = leer_snowflake()
+            entregas, conductores, fuente['hora'] = leer_snowflake(VERSION_DATOS)
             fuente['vivo'] = True
         except Exception as e:  # sin conexión, prueba vencida, llave revocada...: sigo con la copia
             fuente['error'] = type(e).__name__
@@ -102,22 +111,26 @@ def cargar_datos():
     elif fallo_reciente:
         fuente['error'] = 'reciente'
     if not fuente['vivo']:
-        entregas, conductores = leer_copia()
+        entregas, conductores = leer_copia(VERSION_DATOS)
     return (*preparar(entregas, conductores), fuente)
 
 
 @st.cache_data
 def preparar(entregas, conductores):
-    # Saco los días incompletos de los bordes: el primero y los últimos tienen viajes que todavía no terminaron
-    # (por ejemplo 23 entregas el último día contra ~550 de un día normal) y bajarían los totales y las comparaciones.
+    # Saco los días incompletos de los bordes: los últimos tienen viajes que todavía no terminaron y bajarían los
+    # totales y las comparaciones. Comparo cada día con la mediana de su mismo día de la semana (un domingo
+    # normal tiene muchas menos entregas que un lunes, y no por eso está incompleto).
     por_dia = entregas.groupby('fecha')['entregas'].sum()
-    completos = por_dia[por_dia >= 0.8 * por_dia.median()].index
+    mediana_dia = por_dia.groupby(por_dia.index.dayofweek).transform('median')
+    completos = por_dia[por_dia >= 0.8 * mediana_dia].index
     dias_excluidos = por_dia[(por_dia.index < completos.min()) | (por_dia.index > completos.max())]
     entregas = entregas[entregas['fecha'].between(completos.min(), completos.max())].copy()
     entregas['anio'] = entregas['fecha'].dt.year
     entregas['mes'] = entregas['fecha'].dt.to_period('M').dt.to_timestamp()
     entregas['dia'] = pd.Categorical(entregas['fecha'].dt.dayofweek.map(dict(enumerate(DIAS))), DIAS, ordered=True)
     entregas['turno'] = entregas['turno'].map(TURNOS)
+    km = [KM_CORREDOR[frozenset(par)] for par in zip(entregas['origen'], entregas['ciudad'])]
+    entregas['tramo'] = pd.Categorical(pd.cut(km, [0, 200, 700, 2000], labels=TRAMOS), TRAMOS, ordered=True)
     return entregas, conductores, dias_excluidos
 
 
@@ -167,7 +180,7 @@ def estilo(fig, alto=320, leyenda=False):
 def mostrar(caja, fig, datos=None, nombre=None):
     """Muestra el gráfico en la tarjeta. Si le paso 'datos', agrega una pestaña con la tabla y un botón para
     bajarla en CSV (la idea de chart_container de streamlit-extras, pero con los textos en español)."""
-    config = {'displayModeBar': False}
+    config = {'displayModeBar': False, 'scrollZoom': False}  # la rueda del mouse mueve la página, no el mapa
     if datos is None:
         caja.plotly_chart(fig, width='stretch', config=config)
         return
@@ -323,9 +336,14 @@ def pagina_resumen():
         texto += (f'La ciudad más rentable es <b>{por_ciudad.iloc[-1]["ciudad"]}</b> '
                   f'({numero(por_ciudad.iloc[-1]["margen_pct"], 1)} %) y la menos rentable '
                   f'<b>{por_ciudad.iloc[0]["ciudad"]}</b> ({numero(por_ciudad.iloc[0]["margen_pct"], 1)} %). ')
-    if len(por_vehiculo) > 1 and por_vehiculo.iloc[0]['margen_pct'] < 0:
-        texto += (f'<b>{por_vehiculo.iloc[0]["tipo_vehiculo"]}</b> da pérdida: '
-                  'su costo de combustible es tan alto como el de un camión (ver la página Flota).')
+    if len(por_vehiculo) > 1:
+        texto += (f'Por tipo de vehículo, el mejor margen es el de <b>{por_vehiculo.iloc[-1]["tipo_vehiculo"]}</b> '
+                  f'({numero(por_vehiculo.iloc[-1]["margen_pct"], 1)} %) y el peor el de '
+                  f'<b>{por_vehiculo.iloc[0]["tipo_vehiculo"]}</b> ({numero(por_vehiculo.iloc[0]["margen_pct"], 1)} %). ')
+    if len(por_ciudad) > 1:
+        menos_puntual = por_ciudad.sort_values('pct_a_tiempo').iloc[0]
+        texto += (f'La ciudad menos puntual es <b>{menos_puntual["ciudad"]}</b> '
+                  f'({numero(menos_puntual["pct_a_tiempo"], 1)} % a tiempo; ver la página Puntualidad).')
     st.write('')
     lectura(texto)
 
@@ -365,8 +383,9 @@ def pagina_resumen():
             {'mes': 'Mes', 'ingreso': 'Ingreso (mil M COP)', 'costo': 'Costo (mil M COP)', 'margen_pct': 'Margen %'}),
             'ingreso_costo_mensual')
     st.markdown(f'<div class="nota">Los datos van del {fecha_min:%d/%m/%Y} al {fecha_max:%d/%m/%Y}: noviembre de 2024 y de 2026 están '
-                'incompletos y no se grafican. Febrero baja porque tiene 28 días. Estos dos gráficos muestran los dos años '
-                'para poder comparar, aunque arriba se elija uno.</div>', unsafe_allow_html=True)
+                'incompletos y no se grafican. La demanda sube en noviembre (Black Friday) y diciembre (Navidad) y cae en '
+                'enero, y cada año es más alta que el anterior. Estos dos gráficos muestran los dos años para poder '
+                'comparar, aunque arriba se elija uno.</div>', unsafe_allow_html=True)
     st.write('')
 
     izq, der = st.columns([2, 3])
@@ -392,36 +411,107 @@ def pagina_resumen():
 
 
 # ================================================================ Página: Ciudades
+def mapa_corredores(df, metrica):
+    """Mapa con un corredor por par de ciudades (ida y vuelta juntas): el grosor es la cantidad de entregas y el
+    color la métrica elegida. Los círculos son las ciudades de destino, con la misma escala de color."""
+    col, nombre = {'Puntualidad': ('pct_a_tiempo', '% a tiempo'), 'Margen': ('margen_pct', 'margen %')}[metrica]
+    df = df.assign(corredor=[' - '.join(sorted(par)) for par in zip(df['origen'], df['ciudad'])])
+    pr = resumen(df, 'corredor')
+    pc = resumen(df, 'ciudad')
+    valores = pd.concat([pr[col], pc[col]])
+    cmin, cmax = valores.min(), valores.max()
+    # rojo = peor, azul = mejor (sin blanco en el medio: un corredor blanco no se vería sobre el mapa claro)
+    escala = [[0, '#b91c1c'], [0.5, '#f59e0b'], [1, '#1d4ed8']]
+
+    def color(v):
+        return px.colors.sample_colorscale(escala, [(v - cmin) / (cmax - cmin) if cmax > cmin else 0.5])[0]
+
+    def arco(corredor, t):
+        """Punto t (0 a 1) de una curva entre las dos ciudades. Las rutas a Barranquilla se curvan hacia un lado y
+        las de Cartagena hacia el otro: en línea recta quedarían casi encimadas."""
+        a, b = corredor.split(' - ')
+        (la1, lo1), (la2, lo2) = COORDENADAS[a], COORDENADAS[b]
+        curva = 0.0 if {a, b} == {'Barranquilla', 'Cartagena'} else (0.18 if 'Barranquilla' in (a, b) else -0.18)
+        if a == 'Barranquilla' or a == 'Cartagena':
+            curva = -curva  # que el sentido de la curva no dependa del orden alfabético
+        cla, clo = (la1 + la2) / 2 - curva * (lo2 - lo1), (lo1 + lo2) / 2 + curva * (la2 - la1)
+        return ((1 - t) ** 2 * la1 + 2 * (1 - t) * t * cla + t ** 2 * la2,
+                (1 - t) ** 2 * lo1 + 2 * (1 - t) * t * clo + t ** 2 * lo2)
+
+    fig = go.Figure()
+    maximo = pr['entregas'].max()
+    pasos = [i / 24 for i in range(25)]
+    for _, fila in pr.sort_values('entregas').iterrows():
+        puntos = [arco(fila['corredor'], t) for t in pasos]
+        fig.add_scattermap(lat=[p[0] for p in puntos], lon=[p[1] for p in puntos], mode='lines', hoverinfo='skip',
+                           showlegend=False, line=dict(width=2 + 10 * fila['entregas'] / maximo, color=color(fila[col])))
+    # Un punto invisible en el medio de cada corredor para mostrar sus datos al pasar el mouse
+    medio = pr.assign(lat=[arco(c, 0.5)[0] for c in pr['corredor']], lon=[arco(c, 0.5)[1] for c in pr['corredor']])
+    fig.add_scattermap(lat=medio['lat'], lon=medio['lon'], mode='markers', showlegend=False,
+                       marker=dict(size=16, opacity=0), hovertext=medio['corredor'],
+                       customdata=medio[['entregas', 'pct_a_tiempo', 'margen_pct']],
+                       hovertemplate='<b>%{hovertext}</b> (ida y vuelta)<br>%{customdata[0]:,.0f} entregas<br>'
+                                     '%{customdata[1]:.1f} % a tiempo · margen %{customdata[2]:.1f} %<extra></extra>')
+    fig.add_scattermap(lat=[COORDENADAS[c][0] for c in pc['ciudad']], lon=[COORDENADAS[c][1] for c in pc['ciudad']],
+                       mode='markers', showlegend=False, hovertext=pc['ciudad'],
+                       customdata=pc[['entregas', 'pct_a_tiempo', 'margen_pct']],
+                       marker=dict(size=10 + 30 * pc['entregas'] / pc['entregas'].max(), color=pc[col],
+                                   colorscale=escala, cmin=cmin, cmax=cmax, opacity=0.95,
+                                   colorbar=dict(title=dict(text=nombre, side='right'), thickness=10, len=0.6, x=0.98)),
+                       hovertemplate='<b>%{hovertext}</b> (como destino)<br>%{customdata[0]:,.0f} entregas<br>'
+                                     '%{customdata[1]:.1f} % a tiempo · margen %{customdata[2]:.1f} %<extra></extra>')
+    # Nombres de las ciudades (Cartagena a la izquierda: a la derecha se encimaría con Barranquilla)
+    for lado, lista in [('middle right', [c for c in pc['ciudad'] if c != 'Cartagena']),
+                        ('middle left', [c for c in pc['ciudad'] if c == 'Cartagena'])]:
+        if lista:
+            fig.add_scattermap(lat=[COORDENADAS[c][0] for c in lista], lon=[COORDENADAS[c][1] for c in lista],
+                               mode='markers+text', marker=dict(size=1, opacity=0), text=[f'  {c}  ' for c in lista],
+                               textposition=lado, hoverinfo='skip', showlegend=False,
+                               textfont=dict(size=13, color='#111827'))
+    fig.update_layout(height=560, margin=dict(l=0, r=0, t=0, b=0), separators=',.',
+                      map=dict(style='carto-positron', zoom=5.4, center=dict(lat=7.4, lon=-75.3)),
+                      hoverlabel=dict(bgcolor='white', font_size=12))
+    datos = para_descargar(pr.sort_values('entregas', ascending=False),
+                           {'corredor': 'Corredor', 'entregas': 'Entregas', 'pct_a_tiempo': '% a tiempo',
+                            'margen_pct': 'Margen %'})
+    return fig, pr, datos
+
+
 def pagina_ciudades():
     df = aplicar_filtros(entregas)
-    encabezado('Ciudades de destino', df)
+    encabezado('Ciudades y rutas', df)
     pc = resumen(df, 'ciudad')
-    pc['lat'] = pc['ciudad'].map(lambda c: COORDENADAS[c][0])
-    pc['lon'] = pc['ciudad'].map(lambda c: COORDENADAS[c][1])
     lider = pc.sort_values('entregas').iloc[-1]
-    lectura(f'<b>{lider["ciudad"]}</b> recibe la mayor parte de las entregas '
-            f'({numero(100 * lider["entregas"] / pc["entregas"].sum(), 1)} %). La puntualidad es pareja entre ciudades; '
-            'lo que cambia es el margen, porque las rutas largas consumen más combustible por entrega.')
+    texto = (f'<b>{lider["ciudad"]}</b> recibe la mayor parte de las entregas '
+             f'({numero(100 * lider["entregas"] / pc["entregas"].sum(), 1)} %). ')
+    if len(pc) > 1:
+        puntual, rentable = pc.sort_values('pct_a_tiempo'), pc.sort_values('margen_pct')
+        texto += (f'La menos puntual es <b>{puntual.iloc[0]["ciudad"]}</b> ({numero(puntual.iloc[0]["pct_a_tiempo"], 1)} %) '
+                  f'y la más puntual <b>{puntual.iloc[-1]["ciudad"]}</b> ({numero(puntual.iloc[-1]["pct_a_tiempo"], 1)} %). '
+                  f'El mejor margen lo deja <b>{rentable.iloc[-1]["ciudad"]}</b> y el peor <b>{rentable.iloc[0]["ciudad"]}</b>.')
+    lectura(texto)
 
-    izq, der = st.columns([2, 3])
+    caja = tarjeta('Mapa de rutas', 'el grosor de cada corredor es la cantidad de entregas; el color, la métrica elegida')
+    metrica = caja.segmented_control('Color según', ['Puntualidad', 'Margen'], default='Puntualidad',
+                                     label_visibility='collapsed', key='metrica-mapa') or 'Puntualidad'
+    fig, pr, datos = mapa_corredores(df, metrica)
+    mostrar(caja, fig, datos, 'corredores')
+    peor = pr.sort_values('pct_a_tiempo').iloc[0]
+    st.markdown(f'<div class="nota">Rojo = peor, amarillo = intermedio, azul = mejor. El corredor menos puntual es {peor["corredor"]} '
+                f'({numero(peor["pct_a_tiempo"], 1)} % a tiempo). Pasá el mouse por el medio de un corredor o por una '
+                'ciudad para ver sus números.</div>', unsafe_allow_html=True)
+    st.write('')
+
+    izq, der = st.columns(2)
     with izq:
-        caja = tarjeta('Mapa de entregas', 'el tamaño es la cantidad de entregas')
-        fig = px.scatter_map(pc, lat='lat', lon='lon', size='entregas', size_max=45, hover_name='ciudad',
-                             custom_data=['entregas', 'pct_a_tiempo', 'margen_pct'], zoom=4.3,
-                             center=dict(lat=7.2, lon=-75.0), map_style='carto-positron')
-        fig.update_traces(marker=dict(color=AZUL, opacity=0.75),
-                          hovertemplate='<b>%{hovertext}</b><br>%{customdata[0]:,.0f} entregas<br>'
-                                        '%{customdata[1]:.1f} % a tiempo<br>margen %{customdata[2]:.1f} %<extra></extra>')
-        fig.update_layout(height=520, margin=dict(l=0, r=0, t=0, b=0), separators=',.')
-        mostrar(caja, fig)
-    with der:
-        caja = tarjeta('Entregas por ciudad')
+        caja = tarjeta('Entregas por ciudad de destino')
         mostrar(caja, barras_horizontales(pc.sort_values('entregas'), 'entregas', 'ciudad', lambda v: numero(v)))
-        caja = tarjeta('Margen por ciudad', '(ingreso − costo) / ingreso')
+    with der:
+        caja = tarjeta('Margen por ciudad de destino', '(ingreso − costo) / ingreso')
         mostrar(caja, barras_horizontales(pc.sort_values('margen_pct'), 'margen_pct', 'ciudad',
                                           lambda v: f'{numero(v, 1)} %'))
 
-    caja = tarjeta('Detalle por ciudad')
+    caja = tarjeta('Detalle por ciudad de destino')
     tabla = pc.sort_values('entregas', ascending=False)[
         ['ciudad', 'entregas', 'pct_a_tiempo', 'peso_kg', 'ingreso', 'margen_pct', 'minutos_promedio']]
     # Redondeo antes y uso formato 'localized' en todas: así respeta el idioma del navegador (41.827 y 89,9 en español)
@@ -445,10 +535,22 @@ def pagina_flota():
     datos_flota = para_descargar(pv.sort_values('margen_pct', ascending=False), {
         'tipo_vehiculo': 'Tipo de vehículo', 'entregas': 'Entregas', 'margen_pct': 'Margen %',
         'litros_100km': 'Litros cada 100 km', 'kg_por_entrega': 'Kilos por entrega', 'pct_a_tiempo': '% a tiempo'})
-    lectura('los camiones grandes son los más rentables porque llevan más carga con un costo parecido. '
-            'La <b>moto da pérdida</b> por una limitación de los datos sintéticos: el combustible se calcula solo con la '
-            'distancia, así que una moto gasta lo mismo por kilómetro que un camión (≈ 11,5 L cada 100 km) '
-            'pero lleva paquetes chicos. Con datos reales el consumo de una moto sería mucho menor.')
+    por_tramo = resumen(df, ['tipo_vehiculo', 'tramo'])
+    texto = ''
+    sin_moto = pv[pv['tipo_vehiculo'] != 'Motocicleta'].sort_values('margen_pct')
+    if len(sin_moto) > 1:
+        texto = (f'entre los vehículos que hacen todas las rutas, el mejor margen es el de <b>{sin_moto.iloc[-1]["tipo_vehiculo"]}</b> '
+                 f'({numero(sin_moto.iloc[-1]["margen_pct"], 1)} %) y el peor el de <b>{sin_moto.iloc[0]["tipo_vehiculo"]}</b> '
+                 f'({numero(sin_moto.iloc[0]["margen_pct"], 1)} %): cuantos más kilos lleva el viaje, más carga hay para '
+                 'repartir el combustible, los peajes y el conductor. ')
+    van_larga = por_tramo[(por_tramo['tipo_vehiculo'] == 'Van') & (por_tramo['tramo'] == TRAMOS[2])]
+    if not van_larga.empty and van_larga['margen_pct'].iloc[0] < 0:
+        texto += (f'La <b>van pierde plata en las rutas largas</b> a la costa (margen {numero(van_larga["margen_pct"].iloc[0], 1)} %): '
+                  'esos viajes deberían hacerse en camión. ')
+    if 'Motocicleta' in set(pv['tipo_vehiculo']):
+        texto += ('La moto tiene buen margen pero hace pocas entregas: solo cubre el corredor corto Barranquilla - Cartagena, '
+                  'donde no paga peajes.')
+    lectura(texto)
     izq, der = st.columns(2)
     with izq:
         caja = tarjeta('Margen por tipo de vehículo', '(ingreso − costo) / ingreso')
@@ -468,6 +570,22 @@ def pagina_flota():
         mostrar(caja, barras_horizontales(pv.sort_values('kg_por_entrega'), 'kg_por_entrega', 'tipo_vehiculo',
                                           lambda v: numero(v), colores=COLORES_VEHICULO), datos_flota, 'flota_kg_por_entrega')
 
+    caja = tarjeta('Margen según el largo de la ruta', 'por tipo de vehículo · (ingreso − costo) / ingreso')
+    tabla = por_tramo.pivot(index='tipo_vehiculo', columns='tramo', values='margen_pct')
+    tabla = tabla.reindex([t for t in COLORES_VEHICULO if t in tabla.index])
+    limite = max(abs(tabla.min().min()), abs(tabla.max().max()))
+    fig = px.imshow(tabla, text_auto='.1f', aspect='auto', zmin=-limite, zmax=limite,
+                    color_continuous_scale=['#c0392b', '#f7f7f7', '#104281'])  # rojo = pérdida, azul = ganancia
+    fig.update_traces(hovertemplate='%{y} · ruta %{x}: margen %{z:.1f} %<extra></extra>', xgap=2, ygap=2)
+    fig.update_xaxes(side='top')
+    datos = tabla.round(1)
+    datos.columns = [str(c) for c in datos.columns]
+    mostrar(caja, estilo(fig, alto=250), datos.reset_index().rename(columns={'tipo_vehiculo': 'Tipo de vehículo'}),
+            'margen_vehiculo_tramo')
+    st.markdown('<div class="nota">Vacío = ese vehículo no hace rutas de ese largo. Costo = combustible (ACPM o gasolina) + '
+                'peajes (las motos no pagan) + horas del conductor. Ingreso = cargo fijo + tarifa por kilo que sube con la '
+                'distancia.</div>', unsafe_allow_html=True)
+
 
 # ================================================================ Página: Puntualidad
 def pagina_puntualidad():
@@ -475,13 +593,24 @@ def pagina_puntualidad():
     encabezado('Puntualidad', df)
     total = resumen(df).iloc[0]
     tabla = resumen(df, ['turno', 'dia']).pivot(index='turno', columns='dia', values='pct_a_tiempo')
-    peor = tabla.stack().idxmin()
-    lectura(f'el {numero(total["pct_a_tiempo"], 1)} % de las entregas llega a tiempo y casi no cambia según el día o el turno '
-            f'(el valor más bajo es {numero(tabla.min().min(), 1)} %, el {peor[1].lower()} en el {peor[0].split(" ·")[0]}). '
-            'El retraso no depende del momento de la semana, así que para mejorar hay que mirar rutas y conductores.')
+    ciudad_mes = resumen(df.assign(n_mes=df['fecha'].dt.month), ['ciudad', 'n_mes']).pivot(
+        index='ciudad', columns='n_mes', values='pct_a_tiempo')
+    ciudad_mes.columns = [MESES[m - 1] for m in ciudad_mes.columns]
+    critica = ciudad_mes.stack().idxmin()
+    lectura(f'el {numero(total["pct_a_tiempo"], 1)} % de las entregas llega a tiempo. El peor momento es '
+            f'<b>{critica[0]} en {critica[1].lower()}</b> ({numero(ciudad_mes.min().min(), 1)} %). La puntualidad cae en '
+            'Barranquilla y Cartagena en la temporada de lluvias (septiembre a noviembre), en Bogotá casi todo el año por el '
+            'tráfico y en todas las ciudades en diciembre. El día de la semana y el turno casi no influyen: lo que pesa es la '
+            'ciudad, la época del año y el conductor (ver la página Conductores).')
+    caja = tarjeta('% de entregas a tiempo por ciudad y mes', 'todos los años del período juntos · más oscuro = más puntual')
+    fig = px.imshow(ciudad_mes, text_auto='.1f', aspect='auto', color_continuous_scale=['#fbe3d6', '#cde2fb', '#104281'])
+    fig.update_traces(hovertemplate='%{y} · %{x}: %{z:.1f} % a tiempo<extra></extra>', xgap=2, ygap=2)
+    datos = ciudad_mes.round(1).reset_index().rename(columns={'ciudad': 'Ciudad'})
+    mostrar(caja, estilo(fig, alto=280), datos, 'puntualidad_ciudad_mes')
+
     rango = tabla.max().max() - tabla.min().min()
     caja = tarjeta('% de entregas a tiempo por día y turno',
-                   f'más oscuro = más puntual · entre la mejor y la peor celda hay solo {numero(rango, 1)} puntos')
+                   f'más oscuro = más puntual · entre la mejor y la peor celda hay {numero(rango, 1)} puntos')
     fig = px.imshow(tabla, text_auto='.1f', aspect='auto', color_continuous_scale=['#cde2fb', '#104281'])
     fig.update_traces(hovertemplate='%{x} · %{y}: %{z:.1f} % a tiempo<extra></extra>', xgap=2, ygap=2)
     datos = tabla.round(1)
@@ -515,7 +644,8 @@ def pagina_conductores():
     mejor = c.sort_values('pct_a_tiempo').iloc[-1]
     lectura(f'el más puntual es <b>{mejor["conductor"]}</b> ({numero(mejor["pct_a_tiempo"], 1)} % a tiempo en '
             f'{numero(mejor["entregas"])} entregas). La categoría de desempeño (Alto / Medio / Bajo) sale de la puntualidad '
-            'de los últimos 90 días, por eso no siempre coincide con el total histórico.')
+            'de los últimos 90 días (Alto: 90 % o más; Medio: 82 a 90 %; Bajo: menos de 82 %), por eso no siempre '
+            'coincide con el total histórico. Los conductores con menos de 6 meses en la empresa llegan tarde más seguido.')
 
     # El gráfico y el ranking van uno debajo del otro, a todo el ancho, para que la tabla entre completa
     caja = tarjeta('Entregas y puntualidad', 'cada punto es un conductor')
@@ -540,7 +670,7 @@ def pagina_conductores():
         'conductor': 'Conductor', 'zona': 'Zona',
         'entregas': st.column_config.NumberColumn('Entregas', format='localized'),
         'pct_a_tiempo': st.column_config.ProgressColumn('% a tiempo', format='localized',
-                                                        min_value=80, max_value=100),
+                                                        min_value=50, max_value=100),
         'margen_pct': st.column_config.NumberColumn('Margen %', format='localized')})
 
 
@@ -559,7 +689,7 @@ def explorador_html(_datos, filtros):
 def pagina_explorador():
     st.title('Explorador')
     st.markdown('<div class="nota">Armá tus propios gráficos: arrastrá columnas a los ejes X e Y, a color o a filtros. '
-                'Usa los mismos datos y filtros que el resto del tablero (una fila por día, ciudad, vehículo y turno). '
+                'Usa los mismos datos y filtros que el resto del tablero (una fila por día, ruta, vehículo y turno). '
                 'Hecho con PyGWalker, una librería de código abierto parecida a Tableau.</div>', unsafe_allow_html=True)
     st.markdown('<div class="lectura"><b>Para empezar:</b> arrastrá <b>ciudad</b> a <i>X-Axis</i>, <b>ingreso</b> a <i>Y-Axis</i> '
                 'y <b>tipo_vehiculo</b> a <i>Color</i>. Las columnas numéricas se suman; con el menú de cada campo '
@@ -571,7 +701,9 @@ def pagina_explorador():
         st.stop()
     datos = df.assign(fecha=df['fecha'].dt.strftime('%Y-%m-%d'), dia=df['dia'].astype(str), anio=df['anio'].astype(str),
                       mes=df['mes'].dt.strftime('%Y-%m'))
-    datos = datos[['fecha', 'anio', 'mes', 'dia', 'ciudad', 'tipo_vehiculo', 'turno', 'entregas', 'entregas_a_tiempo',
+    datos = datos.assign(tramo=df['tramo'].astype(str))
+    datos = datos[['fecha', 'anio', 'mes', 'dia', 'origen', 'ciudad', 'tramo', 'tipo_vehiculo', 'turno', 'entregas',
+                   'entregas_a_tiempo',
                    'peso_kg', 'km', 'litros', 'ingreso', 'costo', 'minutos_entrega']]
     filtros = (desde, hasta, tuple(ciudades), tuple(vehiculos), tuple(turnos))
     # El HTML lo genero yo con PyGWalker a partir de mis datos (no viene de afuera), así que se puede embeber
@@ -589,7 +721,8 @@ def pagina_modelo():
 2. **ETL** (`05_etl_pipeline.py`): extrae, calcula las métricas y carga en Snowflake todas las noches a las 02:00.
 3. **Snowflake** (`FLEETLOGIX_DW.ANALYTICS`): `fact_deliveries` (una fila por entrega completada) y 6 dimensiones.
 4. **Este tablero** (Streamlit) corre dos consultas sobre el modelo estrella (están en `dashboard/consultas.py`):
-   resume la tabla de hechos por día, ciudad, tipo de vehículo y turno, y saca los totales de cada conductor.
+   resume la tabla de hechos por día, ciudad de origen y de destino, tipo de vehículo y turno, y saca los
+   totales de cada conductor.
    Se conecta con un usuario de **solo lectura** que tiene su propio par de llaves, y guarda el resultado una hora
    para no prender el warehouse en cada visita.
 5. **Copia de respaldo** (`07_export_dashboard_data.py`): las mismas consultas guardadas en `dashboard/data/` en parquet.
@@ -604,14 +737,14 @@ def pagina_modelo():
     caja.markdown(f"""
 | Consulta | Filas | Qué tiene |
 |---|---|---|
-| `entregas_diarias` | {numero(len(entregas))} | entregas, a tiempo, kilos, km, litros, ingreso, costo y minutos por día, ciudad, vehículo y turno |
+| `entregas_diarias` | {numero(len(entregas))} | entregas, a tiempo, kilos, km, litros, ingreso, costo y minutos por día, origen, destino, vehículo y turno |
 | `conductores` | {numero(len(conductores))} | totales de cada conductor (sumando todas sus versiones del historial SCD tipo 2) |
 """)
 
 
 st.navigation([
     st.Page(pagina_resumen, title='Resumen', icon=':material/dashboard:', default=True),
-    st.Page(pagina_ciudades, title='Ciudades', icon=':material/location_on:', url_path='ciudades'),
+    st.Page(pagina_ciudades, title='Ciudades y rutas', icon=':material/location_on:', url_path='ciudades'),
     st.Page(pagina_flota, title='Flota', icon=':material/local_shipping:', url_path='flota'),
     st.Page(pagina_puntualidad, title='Puntualidad', icon=':material/schedule:', url_path='puntualidad'),
     st.Page(pagina_conductores, title='Conductores', icon=':material/badge:', url_path='conductores'),
