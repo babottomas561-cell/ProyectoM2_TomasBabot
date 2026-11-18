@@ -95,7 +95,8 @@ En el notebook está el diagrama entidad-relación y el análisis de restriccion
 - Agregar una tabla de clientes. Esto lo resolví en el DW con `dim_customer`.
 
 **Generación de datos (`01_data_generation.py`):** partí del script de Henry. Usé Faker en español de Colombia,
-inserción por lotes con `execute_batch` y una validación al final. Le corregí 8 problemas al script original, por ejemplo:
+inserción por lotes con `execute_batch`, un log de la carga y controles al final: 12 validaciones de calidad y 8 distribuciones
+que reviso con pandas contra un rango esperado (por ejemplo, entre 80% y 95% de entregas a tiempo). Le corregí 8 problemas al script original, por ejemplo:
 - Generaba 48 rutas en vez de 50.
 - Los viajes terminaban un mes antes de hoy, porque redondeaba el paso de tiempo.
 - Al cortar en 400.000 entregas, los últimos viajes quedaban sin ninguna.

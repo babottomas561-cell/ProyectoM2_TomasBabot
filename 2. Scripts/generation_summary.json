@@ -9,5 +9,71 @@
     "deliveries": 400000,
     "maintenance": 5000
   },
-  "validations_passed": true
+  "validations_passed": true,
+  "distributions": {
+    "Entregas por viaje (promedio)": {
+      "valor": 4.0,
+      "rango_esperado": [
+        3.8,
+        4.2
+      ],
+      "ok": true
+    },
+    "Carga promedio (% de la capacidad)": {
+      "valor": 66.27,
+      "rango_esperado": [
+        40,
+        90
+      ],
+      "ok": true
+    },
+    "Entregas a tiempo (%)": {
+      "valor": 88.11,
+      "rango_esperado": [
+        80,
+        95
+      ],
+      "ok": true
+    },
+    "Viajes que salen entre las 6 y las 19 h (%)": {
+      "valor": 82.58,
+      "rango_esperado": [
+        75,
+        100
+      ],
+      "ok": true
+    },
+    "Viajes del domingo / d\u00eda h\u00e1bil": {
+      "valor": 0.29,
+      "rango_esperado": [
+        0.1,
+        0.5
+      ],
+      "ok": true
+    },
+    "Viajes de diciembre / enero": {
+      "valor": 1.58,
+      "rango_esperado": [
+        1.2,
+        2.0
+      ],
+      "ok": true
+    },
+    "Viajes con destino Bogot\u00e1 (%)": {
+      "valor": 26.89,
+      "rango_esperado": [
+        22,
+        35
+      ],
+      "ok": true
+    },
+    "Consumo cami\u00f3n grande / moto": {
+      "valor": 9.06,
+      "rango_esperado": [
+        5,
+        15
+      ],
+      "ok": true
+    }
+  }
 }

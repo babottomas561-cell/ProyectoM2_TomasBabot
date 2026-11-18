@@ -61,3 +61,16 @@
  Resumen guardado en generation_summary.json
 2026-11-17 16:05:05,228 - INFO - 
  Conexión cerrada
+2026-11-17 23:21:15,011 - INFO -  Conexión exitosa a PostgreSQL
+2026-11-17 23:21:15,011 - INFO - 
+ VERIFICANDO DISTRIBUCIONES...
+2026-11-17 23:21:15,801 - INFO -    Entregas por viaje (promedio): 4.00 (esperado de 3.8 a 4.2): OK
+2026-11-17 23:21:15,801 - INFO -    Carga promedio (% de la capacidad): 66.27 (esperado de 40 a 90): OK
+2026-11-17 23:21:15,801 - INFO -    Entregas a tiempo (%): 88.11 (esperado de 80 a 95): OK
+2026-11-17 23:21:15,801 - INFO -    Viajes que salen entre las 6 y las 19 h (%): 82.58 (esperado de 75 a 100): OK
+2026-11-17 23:21:15,801 - INFO -    Viajes del domingo / día hábil: 0.29 (esperado de 0.1 a 0.5): OK
+2026-11-17 23:21:15,801 - INFO -    Viajes de diciembre / enero: 1.58 (esperado de 1.2 a 2.0): OK
+2026-11-17 23:21:15,801 - INFO -    Viajes con destino Bogotá (%): 26.89 (esperado de 22 a 35): OK
+2026-11-17 23:21:15,801 - INFO -    Consumo camión grande / moto: 9.06 (esperado de 5 a 15): OK
+2026-11-17 23:21:15,810 - INFO - 
+ Conexión cerrada

@@ -821,7 +821,59 @@ class DataGenerator:
                 logging.info(f"   {description}: OK")
         
         return all_valid
-    
+
+    def check_distributions(self):
+        """MEJORA: verificar con pandas que las distribuciones se parezcan a una operación real.
+        Cada indicador tiene un rango esperado; si cae afuera, queda un aviso en el log."""
+        logging.info("\n VERIFICANDO DISTRIBUCIONES...")
+        self.cursor.execute("""
+            SELECT t.departure_datetime,
+                   t.total_weight_kg / v.capacity_kg,
+                   v.vehicle_type,
+                   r.destination_city,
+                   t.fuel_consumed_liters * 100 / r.distance_km,
+                   COUNT(d.delivery_id),
+                   COUNT(*) FILTER (WHERE d.delivered_datetime <= d.scheduled_datetime + INTERVAL '30 minutes')
+            FROM trips t
+            JOIN vehicles v ON v.vehicle_id = t.vehicle_id
+            JOIN routes r   ON r.route_id = t.route_id
+            LEFT JOIN deliveries d ON d.trip_id = t.trip_id AND d.delivery_status = 'delivered'
+            WHERE t.status = 'completed'
+            GROUP BY t.trip_id, 1, 2, 3, 4, 5
+        """)
+        df = pd.DataFrame(self.cursor.fetchall(),
+                          columns=['salida', 'carga', 'tipo', 'destino', 'litros_100km', 'entregas', 'a_tiempo'])
+        df[['carga', 'litros_100km']] = df[['carga', 'litros_100km']].astype(float)
+
+        # Viajes promedio por día de la semana y por mes
+        por_dia = df.groupby(df['salida'].dt.date).size()
+        por_dia.index = pd.to_datetime(por_dia.index)
+        semana = por_dia.groupby(por_dia.index.weekday).mean()
+        por_mes = df.groupby(df['salida'].dt.month).size()
+        consumo = df.groupby('tipo')['litros_100km'].median()
+
+        # (indicador, valor, mínimo esperado, máximo esperado)
+        indicadores = [
+            ('Entregas por viaje (promedio)', df['entregas'].mean(), 3.8, 4.2),
+            ('Carga promedio (% de la capacidad)', 100 * df['carga'].mean(), 40, 90),
+            ('Entregas a tiempo (%)', 100 * df['a_tiempo'].sum() / df['entregas'].sum(), 80, 95),
+            ('Viajes que salen entre las 6 y las 19 h (%)', 100 * df['salida'].dt.hour.between(6, 19).mean(), 75, 100),
+            ('Viajes del domingo / día hábil', semana[6] / semana[:5].mean(), 0.1, 0.5),
+            ('Viajes de diciembre / enero', por_mes[12] / por_mes[1], 1.2, 2.0),
+            ('Viajes con destino Bogotá (%)', 100 * df['destino'].eq('Bogotá').mean(), 22, 35),
+            ('Consumo camión grande / moto', consumo['Camión Grande'] / consumo['Motocicleta'], 5, 15),
+        ]
+        resultado = {}
+        for nombre, valor, minimo, maximo in indicadores:
+            ok = minimo <= valor <= maximo
+            resultado[nombre] = {'valor': round(float(valor), 2), 'rango_esperado': [minimo, maximo], 'ok': bool(ok)}
+            texto = f"   {nombre}: {valor:.2f} (esperado de {minimo} a {maximo})"
+            if ok:
+                logging.info(texto + ": OK")
+            else:
+                logging.warning(texto + ": FUERA DE RANGO")
+        return resultado
+
     def generate_summary_report(self):
         """Generar reporte resumen de datos generados"""
         logging.info("\n RESUMEN DE GENERACIÓN DE DATOS")
@@ -860,7 +912,8 @@ class DataGenerator:
             'generation_date': datetime.now().isoformat(),
             'total_records': total_records,
             'table_counts': self.counters,
-            'validations_passed': self.validate_data_quality()
+            'validations_passed': self.validate_data_quality(),
+            'distributions': self.check_distributions()
         }
         
         with open('generation_summary.json', 'w') as f:
