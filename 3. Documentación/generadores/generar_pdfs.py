@@ -86,6 +86,7 @@ def tabla(df, enteros=(), decimales=()):
 # ---------------------------------------------------------------- README.pdf
 readme = open(os.path.join(RAIZ, 'README.md'), encoding='utf-8').read()
 readme = readme.replace('3.%20Documentación/img/', 'img/')  # en el PDF las imágenes son relativas a 3. Documentación
+readme = re.sub(r'^\[!\[CI\]\(.*\n', '', readme, flags=re.M)  # la insignia del CI tiene sentido en GitHub, no en el PDF
 cuerpo = md(readme)
 cuerpo += ('<div class="salto"></div><h2>Anexo: diagramas</h2>'
            '<h3>Modelo entidad-relación (PostgreSQL)</h3><img src="img/diagrama_ER_fleetlogix.png">'

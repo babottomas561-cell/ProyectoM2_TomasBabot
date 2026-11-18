@@ -46,7 +46,7 @@ ProyectoM2_TomasBabot/
 │   ├── data_dictionary.xlsx
 │   ├── img/                           diagramas (con su fuente HTML) y gráficos
 │   ├── aws_simulacion/                archivos que genera la simulación de AWS
-│   └── generadores/                   scripts que arman los diagramas, los PDF y el diccionario
+│   └── generadores/                   arman diagramas, PDF y diccionario
 ├── dashboard/                         tablero en Streamlit (extra)
 │   ├── app.py
 │   ├── consultas.py                   las consultas al Data Warehouse
