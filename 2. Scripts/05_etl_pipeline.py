@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 import time
 import warnings
 from datetime import date, datetime, timedelta
@@ -42,7 +43,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'etl_pipeline.log')),
-              logging.StreamHandler()]
+              logging.StreamHandler(sys.stdout)]   # stdout: en Jupyter no sale con fondo rojo
 )
 # Sin los avisos internos del conector de Snowflake (proxy, región de AWS): no son errores y llenaban el log
 logging.getLogger('snowflake').setLevel(logging.ERROR)

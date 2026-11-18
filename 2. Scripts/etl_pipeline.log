@@ -374,3 +374,33 @@ snowflake.connector._core | WARNING | Proxy configuration: using environment var
 2026-11-17 23:50:19,376 - INFO - Totales diarios calculados
 2026-11-17 23:50:19,979 - INFO - Conexiones cerradas
 2026-11-17 23:50:19,981 - INFO - ETL terminado en 18.5 s - métricas: {"records_extracted": 774, "records_rejected": 0, "records_transformed": 774, "records_loaded": 774, "errors": 0}
+2026-11-18 00:03:16,509 - INFO - Iniciando ETL - batch 1794970996 - modo incremental
+2026-11-18 00:03:16,524 - INFO - Conectado a PostgreSQL
+2026-11-18 00:03:17,145 - INFO - Conectado a Snowflake
+2026-11-18 00:03:17,146 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-18 00:03:17,206 - INFO - Extraídas 774 entregas
+2026-11-18 00:03:17,207 - INFO - Transformando entregas...
+2026-11-18 00:03:17,229 - INFO - Transformadas 774 entregas
+2026-11-18 00:03:17,230 - INFO - Cargando dimensiones...
+2026-11-18 00:03:27,417 - INFO - dim_driver: 0 versiones nuevas, 0 cerradas (SCD2)
+2026-11-18 00:03:28,330 - INFO - Dimensiones actualizadas
+2026-11-18 00:03:28,331 - INFO - Cargando tabla de hechos...
+2026-11-18 00:03:31,454 - INFO - Cargadas 774 filas en fact_deliveries
+2026-11-18 00:03:32,960 - INFO - Totales diarios calculados
+2026-11-18 00:03:33,205 - INFO - Conexiones cerradas
+2026-11-18 00:03:33,207 - INFO - ETL terminado en 16.7 s - métricas: {"records_extracted": 774, "records_rejected": 0, "records_transformed": 774, "records_loaded": 774, "errors": 0}
+2026-11-18 00:03:35,121 - INFO - Iniciando ETL - batch 1794971015 - modo incremental
+2026-11-18 00:03:35,130 - INFO - Conectado a PostgreSQL
+2026-11-18 00:03:35,538 - INFO - Conectado a Snowflake
+2026-11-18 00:03:35,539 - INFO - Extrayendo entregas desde 2026-11-16 hasta 2026-11-17...
+2026-11-18 00:03:35,599 - INFO - Extraídas 774 entregas
+2026-11-18 00:03:35,600 - INFO - Transformando entregas...
+2026-11-18 00:03:35,621 - INFO - Transformadas 774 entregas
+2026-11-18 00:03:35,622 - INFO - Cargando dimensiones...
+2026-11-18 00:03:56,977 - INFO - dim_driver: 1 versiones nuevas, 1 cerradas (SCD2)
+2026-11-18 00:03:57,732 - INFO - Dimensiones actualizadas
+2026-11-18 00:03:57,733 - INFO - Cargando tabla de hechos...
+2026-11-18 00:04:01,252 - INFO - Cargadas 774 filas en fact_deliveries
+2026-11-18 00:04:02,664 - INFO - Totales diarios calculados
+2026-11-18 00:04:02,927 - INFO - Conexiones cerradas
+2026-11-18 00:04:02,929 - INFO - ETL terminado en 27.8 s - métricas: {"records_extracted": 774, "records_rejected": 0, "records_transformed": 774, "records_loaded": 774, "errors": 0}
