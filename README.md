@@ -44,8 +44,9 @@ ProyectoM2_TomasBabot/
 │   ├── Manual_Consultas_SQL.pdf
 │   ├── Arquitectura_Tecnica.pdf
 │   ├── data_dictionary.xlsx
-│   ├── img/                           diagramas y gráficos
-│   └── aws_simulacion/                archivos que genera la simulación de AWS
+│   ├── img/                           diagramas (con su fuente HTML) y gráficos
+│   ├── aws_simulacion/                archivos que genera la simulación de AWS
+│   └── generadores/                   scripts que arman los diagramas, los PDF y el diccionario
 ├── dashboard/                         tablero en Streamlit (extra)
 │   ├── app.py
 │   ├── consultas.py                   las consultas al Data Warehouse
@@ -75,7 +76,31 @@ cp .env.example .env          # y completar los datos de conexión
 5. ETL: `python 05_etl_pipeline.py --full` para la carga inicial. Para que corra todos los días: `python 05_etl_pipeline.py --schedule`,
    o con cron: `0 2 * * * cd ".../2. Scripts" && python 05_etl_pipeline.py`.
 6. AWS: no hace falta tener cuenta, porque el notebook del Avance 4 corre `06_aws_setup.py` y las Lambda contra un AWS simulado con la librería `moto`.
-7. Abrir los notebooks de `1. Notebooks/` en orden.
+7. Abrir los notebooks de `1. Notebooks/` en orden y ejecutarlos (Run All).
+8. Documentación (opcional, ya está generada). Desde la carpeta del proyecto:
+   - `python "3. Documentación/generadores/generar_diagramas.py"`: el diagrama ER, el modelo estrella y el de AWS, a partir de su fuente HTML en `img/`.
+   - `python "3. Documentación/generadores/generar_diccionario.py"`: `data_dictionary.xlsx`, leyendo las dos bases.
+   - `python "3. Documentación/generadores/generar_pdfs.py"`: los 3 PDF. Corre las queries contra PostgreSQL y toma los textos del README y de los notebooks.
+
+   Los tres usan Google Chrome en modo headless. Si no está en la ruta de Mac, se indica con la variable `CHROME`.
+   Las capturas de Snowflake y del tablero (`img/snowflake_*.jpg`, `img/dashboard_*.png`) son capturas de pantalla.
+
+### Reproducibilidad
+
+El generador usa semilla fija (42) y además una **fecha de referencia fija**: el 17/11/2026 a las 16:04, que es cuando
+generé los datos que muestro en los notebooks y en los documentos. Con la semilla sola no alcanzaba, porque las fechas se
+calculaban desde el día en que se corre el script. Así, cualquiera que lo corra obtiene **exactamente las mismas 505.650 filas**.
+Lo comprobé generando todo de nuevo en una base vacía y comparando tabla por tabla.
+
+Hay cosas que igual pueden cambiar si se corre otro día o en otra máquina:
+- Las queries 2, 4 y 10 (y la 6, 8 y 12 del manual) usan `CURRENT_DATE` ("últimos 60 días", "licencias que vencen en 30 días").
+  No las cambié, porque esa es la idea de la query: una alerta de licencias tiene que mirar el día de hoy.
+  Corridas otro día, cambian un poco esos resultados.
+- En el ETL, la antigüedad en meses y las fechas de vigencia del SCD tipo 2 se calculan con la fecha del día.
+- Los tiempos del Avance 2 dependen de la computadora. Lo que se debería mantener es la mejora en porcentaje.
+
+Para generar datos que terminen en el día de hoy: `FLEETLOGIX_FECHA_REF=hoy python 01_data_generation.py`.
+La demo de SCD tipo 2 del notebook 3 se puede repetir: si ya se corrió, la misma celda la deshace antes de volver a hacerla.
 
 **Credenciales:** no hay ninguna escrita en el código. Se leen del archivo `.env`, que está en el `.gitignore`.
 Para Snowflake usé autenticación con par de llaves (la llave privada está en `keys/`, que tampoco se sube).

@@ -15,8 +15,8 @@
 </style></head>
 <body>
 <div style="position:relative; width:1400px; height:930px;">
-<h1>FleetLogix — Modelo estrella en Snowflake (FLEETLOGIX_DW.ANALYTICS)</h1>
-<div class="sub">Grano de la tabla de hechos: <b>una fila por entrega completada</b>. 6 dimensiones + fact_deliveries · 399.994 hechos cargados</div>
+<h1>FleetLogix: Modelo estrella en Snowflake (FLEETLOGIX_DW.ANALYTICS)</h1>
+<div class="sub">Grano de la tabla de hechos: <b>una fila por entrega completada</b>. 6 dimensiones + fact_deliveries · 399.996 hechos cargados</div>
 <svg width="1400" height="930" style="position:absolute;left:0;top:0">
   <g stroke="#999" stroke-width="1.6">
     <line x1="700" y1="470" x2="200" y2="200"/>
@@ -37,7 +37,7 @@
 <div class="box" style="left:1075px; top:85px;"><h3>dim_vehicle &nbsp;<span class="note">200 · SCD 1</span></h3><ul>
 <li class="pk">vehicle_key</li><li>vehicle_id, license_plate</li><li>vehicle_type, capacity_kg, fuel_type</li><li>age_months, status</li><li>last_maintenance_date</li></ul></div>
 
-<div class="box fact" style="left:550px; top:335px;"><h3>fact_deliveries &nbsp;<span class="note">399.994</span></h3><ul>
+<div class="box fact" style="left:550px; top:335px;"><h3>fact_deliveries &nbsp;<span class="note">399.996</span></h3><ul>
 <li class="pk">delivery_key</li>
 <li class="fk">date_key · scheduled_time_key · delivered_time_key</li>
 <li class="fk">vehicle_key · driver_key · route_key · customer_key</li>
@@ -52,7 +52,7 @@
 <div class="box" style="left:575px; top:700px;"><h3>dim_route &nbsp;<span class="note">50 · SCD 1</span></h3><ul>
 <li class="pk">route_key</li><li>route_code, origin_city, destination_city</li><li>distance_km, estimated_duration_hours</li><li>toll_cost, difficulty_level, route_type</li></ul></div>
 
-<div class="box" style="left:1075px; top:640px;"><h3>dim_customer &nbsp;<span class="note">373.139</span></h3><ul>
+<div class="box" style="left:1075px; top:640px;"><h3>dim_customer &nbsp;<span class="note">58.942</span></h3><ul>
 <li class="pk">customer_key</li><li>customer_name, city</li><li>customer_type (Individual / Empresa / Gobierno)</li><li>first_delivery_date, total_deliveries</li><li>customer_category</li></ul></div>
 </div>
 </body></html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>body{margin:0;padding:24px;background:#fff;font-family:Arial,sans-serif} h2{margin:0 0 8px;font-size:20px;color:#222}</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head><body>
+<h2>FleetLogix: Diagrama Entidad-Relación (modelo transaccional PostgreSQL)</h2>
+<pre class="mermaid">
+erDiagram
+    vehicles ||--o{ trips : "realiza"
+    drivers ||--o{ trips : "conduce"
+    routes ||--o{ trips : "recorre"
+    trips ||--o{ deliveries : "incluye"
+    vehicles ||--o{ maintenance : "recibe"
+
+    vehicles {
+        SERIAL vehicle_id PK
+        VARCHAR_20 license_plate UK "NOT NULL"
+        VARCHAR_50 vehicle_type "NOT NULL"
+        DECIMAL capacity_kg
+        VARCHAR_20 fuel_type
+        DATE acquisition_date
+        VARCHAR_20 status "DEFAULT active"
+    }
+    drivers {
+        SERIAL driver_id PK
+        VARCHAR_20 employee_code UK "NOT NULL"
+        VARCHAR_100 first_name "NOT NULL"
+        VARCHAR_100 last_name "NOT NULL"
+        VARCHAR_50 license_number UK "NOT NULL"
+        DATE license_expiry
+        VARCHAR_20 phone
+        DATE hire_date
+        VARCHAR_20 status "DEFAULT active"
+    }
+    routes {
+        SERIAL route_id PK
+        VARCHAR_20 route_code UK "NOT NULL"
+        VARCHAR_100 origin_city "NOT NULL"
+        VARCHAR_100 destination_city "NOT NULL"
+        DECIMAL distance_km
+        DECIMAL estimated_duration_hours
+        DECIMAL toll_cost "DEFAULT 0"
+    }
+    trips {
+        SERIAL trip_id PK
+        INTEGER vehicle_id FK
+        INTEGER driver_id FK
+        INTEGER route_id FK
+        TIMESTAMP departure_datetime "NOT NULL"
+        TIMESTAMP arrival_datetime
+        DECIMAL fuel_consumed_liters
+        DECIMAL total_weight_kg
+        VARCHAR_20 status "DEFAULT in_progress"
+    }
+    deliveries {
+        SERIAL delivery_id PK
+        INTEGER trip_id FK
+        VARCHAR_50 tracking_number UK "NOT NULL"
+        VARCHAR_200 customer_name "NOT NULL"
+        TEXT delivery_address "NOT NULL"
+        DECIMAL package_weight_kg
+        TIMESTAMP scheduled_datetime
+        TIMESTAMP delivered_datetime
+        VARCHAR_20 delivery_status "DEFAULT pending"
+        BOOLEAN recipient_signature "DEFAULT FALSE"
+    }
+    maintenance {
+        SERIAL maintenance_id PK
+        INTEGER vehicle_id FK
+        DATE maintenance_date "NOT NULL"
+        VARCHAR_50 maintenance_type "NOT NULL"
+        TEXT description
+        DECIMAL cost
+        DATE next_maintenance_date
+        VARCHAR_200 performed_by
+    }
+</pre>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral', er:{fontSize:14}});</script>
+</body></html>

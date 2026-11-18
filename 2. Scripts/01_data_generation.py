@@ -50,6 +50,25 @@ Faker.seed(42)
 random.seed(42)
 np.random.seed(42)
 
+# Fecha de referencia: el "hoy" de los datos. Con la semilla sola no alcanza para repetir los datos,
+# porque las fechas se calculan desde el día en que se corre. Dejo fijo el momento en que generé
+# los datos que uso en los notebooks y los documentos (17/11/2026 16:04), así cualquiera que corra el
+# script obtiene exactamente las mismas filas. Para generar datos hasta el día de hoy: FLEETLOGIX_FECHA_REF=hoy
+_ref = os.getenv('FLEETLOGIX_FECHA_REF', '2026-11-17 16:04:30')
+AHORA = datetime.now() if _ref.lower() == 'hoy' else datetime.fromisoformat(_ref)
+HOY = AHORA.date()
+
+
+AYER = HOY - timedelta(days=1)
+
+
+def dias_desde_hoy(texto):
+    """Convierte '-5y', '-1w' o '+3y' en una fecha contada desde HOY, con la misma cuenta que usa Faker
+    (un año = 365,24 días). Así las fechas salen iguales que cuando le pasaba el texto directo a Faker."""
+    n, unidad = int(texto[:-1]), texto[-1]
+    dias = {'y': 365.24, 'w': 7, 'd': 1}[unidad] * n
+    return HOY + timedelta(days=dias)
+
 class DataGenerator:
     def __init__(self, db_config):
         self.db_config = db_config
@@ -103,8 +122,10 @@ class DataGenerator:
                 license_plate = f"{fake.random_uppercase_letter()}{fake.random_uppercase_letter()}{fake.random_uppercase_letter()}{random.randint(100,999)}"
             used_plates.add(license_plate)
             
-            # Fecha de adquisición en los últimos 5 años
-            acquisition_date = fake.date_between(start_date='-5y', end_date='-1m')
+            # Fecha de adquisición en los últimos 5 años, hasta ayer
+            # (antes decía end_date='-1m' pensando en un mes, pero en Faker 'm' es un minuto y 'M' es mes:
+            #  en la práctica quedaba "hasta ayer". Lo dejo escrito así para que los datos no cambien)
+            acquisition_date = fake.date_between(start_date=dias_desde_hoy('-5y'), end_date=AYER)
             
             # 90% activos, 10% en mantenimiento o inactivos
             status = random.choice(['active'] * 9 + ['maintenance'])
@@ -146,13 +167,14 @@ class DataGenerator:
             license_number = f"{random.randint(1000000000, 9999999999)}"
             license_type = random.choice(license_types)
             
-            # Licencia válida por 3 años, algunas próximas a vencer
-            license_expiry = fake.date_between(start_date='-1m', end_date='+3y')
+            # Licencia válida por 3 años, algunas próximas a vencer (vencen desde ayer en adelante;
+            # las vencidas no reciben viajes después del vencimiento)
+            license_expiry = fake.date_between(start_date=AYER, end_date=dias_desde_hoy('+3y'))
             
             phone = f"3{random.randint(100000000, 999999999)}"  # Celular colombiano
             
             # Fecha de contratación en los últimos 5 años
-            hire_date = fake.date_between(start_date='-5y', end_date='-1w')
+            hire_date = fake.date_between(start_date=dias_desde_hoy('-5y'), end_date=dias_desde_hoy('-1w'))
             
             # 95% activos
             status = random.choice(['active'] * 19 + ['inactive'])
@@ -314,7 +336,7 @@ class DataGenerator:
         routes = self.cursor.fetchall()
 
         # 2 años completos: desde hace 730 días a las 00:00 hasta ayer
-        hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        hoy = AHORA.replace(hour=0, minute=0, second=0, microsecond=0)
         inicio = hoy - timedelta(days=730)
 
         def horas(fecha):
@@ -402,7 +424,7 @@ class DataGenerator:
             if salida - v_desde[vi] > 4 * 365 * 24:
                 fuel_consumed *= 1.05
 
-            status = 'completed' if arrival < datetime.now() else 'in_progress'
+            status = 'completed' if arrival < AHORA else 'in_progress'
             trips.append((
                 int(v_id[vi]),
                 int(c_id[ci]),
@@ -566,7 +588,7 @@ class DataGenerator:
             empresas, peso_empresas, personas = cartera[city]
 
             for i in range(num_deliveries):
-                tracking_number = f"FL{datetime.now().year}{str(delivery_counter+1).zfill(8)}"
+                tracking_number = f"FL{AHORA.year}{str(delivery_counter+1).zfill(8)}"
                 # 30% de las entregas son a empresas de la cartera; el resto, a personas
                 if random.random() < 0.30:
                     customer_name, delivery_address = empresas[np.random.choice(150, p=peso_empresas)]
@@ -910,6 +932,7 @@ class DataGenerator:
         # Guardar resumen en JSON
         summary = {
             'generation_date': datetime.now().isoformat(),
+            'fecha_referencia': AHORA.isoformat(),
             'total_records': total_records,
             'table_counts': self.counters,
             'validations_passed': self.validate_data_quality(),

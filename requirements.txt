@@ -16,6 +16,7 @@ moto>=5.0                                 # AWS simulado para el Avance 4
 pytest                                    # pruebas de las Lambda (tests/)
 jupyter
 nbformat
+mistune>=3.0                              # arma los PDF desde el README (3. Documentación/generadores)
 # Tablero (extra)
 streamlit>=1.67
 plotly>=6.0

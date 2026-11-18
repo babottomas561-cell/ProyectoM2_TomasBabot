@@ -25,7 +25,7 @@
   </defs>
 
   <!-- Título -->
-  <text x="30" y="40" font-size="24" font-weight="bold" fill="#111">FleetLogix — Arquitectura en AWS (región us-east-1)</text>
+  <text x="30" y="40" font-size="24" font-weight="bold" fill="#111">FleetLogix: Arquitectura en AWS (región us-east-1)</text>
   <text x="30" y="64" class="s">Tiempo real: API Gateway + Lambda + DynamoDB · Transaccional: RDS PostgreSQL · Analítico: ETL diario a Snowflake · Costo estimado ≈ US$ 35/mes (tope US$ 50)</text>
 
   <!-- Usuarios -->
@@ -89,7 +89,7 @@
   <text x="300" y="590" font-size="13" font-weight="bold" fill="#8A5A00">2. DATOS TRANSACCIONALES Y ANALÍTICOS (VPC privada)</text>
 
   <rect x="300" y="610" width="940" height="200" rx="12" fill="none" stroke="#2E8B57" stroke-dasharray="7 5"/>
-  <text x="315" y="630" class="xs" fill="#2E8B57">VPC — subred privada (RDS) y subred pública (EC2 con grupo de seguridad)</text>
+  <text x="452" y="630" class="xs" fill="#2E8B57">VPC: RDS en subred privada · EC2 en subred pública</text>
 
   <rect x="320" y="645" width="240" height="150" rx="10" fill="#E3EEFB" stroke="#2F6DB5"/>
   <text x="440" y="672" class="t" text-anchor="middle">RDS PostgreSQL 16</text>
@@ -129,7 +129,7 @@
   
 
   <!-- Transversal -->
-  <text x="300" y="852" font-size="13" font-weight="bold" fill="#8A5A00">3. SEGURIDAD Y MONITOREO (transversal a todos los servicios)</text>
+  <text x="300" y="852" font-size="13" font-weight="bold" fill="#8A5A00">3. SEGURIDAD Y MONITOREO</text>
   <rect x="300" y="870" width="225" height="90" rx="10" fill="#F3F3F3" stroke="#777"/>
   <text x="412" y="896" class="t" text-anchor="middle">CloudWatch</text>
   <text x="412" y="916" class="xs" text-anchor="middle">logs de las Lambda y del ETL</text>
@@ -189,7 +189,7 @@
   <path class="ln" d="M890,760 L968,760"/>
   <text x="898" y="752" class="lab">backup</text>
   <path class="ln" d="M765,645 L765,622 L1450,622 L1450,643"/>
-  <text x="1110" y="616" class="lab">carga (write_pandas, TLS)</text>
+  <text x="1305" y="614" class="lab">carga (write_pandas, TLS)</text>
   <circle cx="1290" cy="622" r="10" fill="#333"/><text x="1290" y="626" class="num" text-anchor="middle">7</text>
   <path class="ln" d="M1450,795 L1450,858"/>
   <circle cx="1470" cy="826" r="10" fill="#333"/><text x="1470" y="830" class="num" text-anchor="middle">8</text>
@@ -202,7 +202,7 @@
 
   <!-- Logs a CloudWatch -->
   <path class="dl" d="M540,340 L284,340 L284,915 L298,915"/>
-  <path class="dl" d="M700,795 L470,868"/>
+  <path class="dl" d="M700,795 L700,828 L535,828 L535,915 L529,915"/>
 
   <!-- Leyenda -->
   <rect x="1330" y="160" width="240" height="300" rx="10" fill="#FAFAFA" stroke="#BBB"/>

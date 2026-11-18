@@ -30,7 +30,7 @@ jobs:
 
       - name: Verificar que los scripts compilan
         run: |
-          python -m py_compile "2. Scripts/"*.py "2. Scripts/lambda_functions/"*.py dashboard/*.py
+          python -m py_compile "2. Scripts/"*.py "2. Scripts/lambda_functions/"*.py dashboard/*.py "3. Documentación/generadores/"*.py
           echo "Todos los scripts compilan"
 
       - name: Probar las Lambda con moto

@@ -10,7 +10,7 @@
   ],
   "alerts_topic_arn": "arn:aws:sns:us-east-1:123456789012:fleetlogix-alerts",
   "lambda_role_arn": "arn:aws:iam::123456789012:role/FleetLogixLambdaRole",
-  "initial_snapshot": "fleetlogix-initial-20261117162208",
+  "initial_snapshot": "fleetlogix-initial-20261117233740",
   "migration_script": "migrate_to_rds.sh",
-  "timestamp": "2026-11-17T16:22:08.973587"
+  "timestamp": "2026-11-17T23:37:40.603085"
 }

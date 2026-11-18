@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import time
+import warnings
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -43,7 +44,10 @@ logging.basicConfig(
     handlers=[logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'etl_pipeline.log')),
               logging.StreamHandler()]
 )
-logging.getLogger('snowflake').setLevel(logging.WARNING)   # sin los mensajes internos del conector
+# Sin los avisos internos del conector de Snowflake (proxy, región de AWS): no son errores y llenaban el log
+logging.getLogger('snowflake').setLevel(logging.ERROR)
+# pandas avisa que solo prueba read_sql con SQLAlchemy; con psycopg2 funciona bien y así se evita otra dependencia
+warnings.filterwarnings('ignore', message='pandas only supports SQLAlchemy')
 
 POSTGRES_CONFIG = {
     'host': os.getenv('PGHOST', 'localhost'),
@@ -60,6 +64,8 @@ SNOWFLAKE_CONFIG = {
     'database': os.getenv('SNOWFLAKE_DATABASE', 'FLEETLOGIX_DW'),
     'schema': os.getenv('SNOWFLAKE_SCHEMA', 'ANALYTICS'),
     'role': os.getenv('SNOWFLAKE_ROLE', 'ACCOUNTADMIN'),
+    # Al cerrar la sesión, esperar las consultas que sigan corriendo (el conector pide decirlo explícito)
+    'enable_server_session_keep_alive_auto_detection': True,
 }
 # Autenticación: con par de llaves (recomendado, evita la verificación en dos pasos)
 # o, si no hay llave configurada, con contraseña.
@@ -129,7 +135,7 @@ class FleetLogixETL:
     def _write(self, df, tabla):
         """Sube un DataFrame a una tabla de Snowflake (write_pandas usa archivos Parquet + COPY,
         mucho más rápido que insertar fila por fila)."""
-        df = df.copy()
+        df = df.reset_index(drop=True)          # write_pandas no sube el índice y avisa si no es 0..n-1
         df.columns = [c.upper() for c in df.columns]
         ok, _, nrows, _ = write_pandas(self.sf_conn, df, tabla.upper(),
                                        quote_identifiers=False, use_logical_type=True)
